@@ -1,0 +1,2 @@
+#define libDispatchQueueVERSION_MAJOR @libDispatchQueueVERSION_MAJOR@
+#define libDispatchQueueVERSION_MINOR @libDispatchQueueVERSION_MINOR@
