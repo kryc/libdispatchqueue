@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <assert.h>
+#include <iterator>
 #include <memory>
 #include <thread>
 #include <chrono>
@@ -59,12 +61,23 @@ namespace dispatch
         ThreadQueue = this;
         for (;;)
         {
+            if (m_CrossThread.size() > 0)
+            {
+                std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
+                for (auto& callable : m_CrossThread)
+                {
+                    PostTaskInternal(std::move(callable));
+                }
+                m_CrossThread.clear();
+            }
+
             if (m_Queue.size() == 0)
             {
                 //
                 // Check if we kill this dispatcher
                 //
-                if (m_Stop == true || m_KeepAlive == false)
+                if (m_Stop == true ||
+                    (m_KeepAlive == false && m_ReceivedTask == true))
                 {
                     break;
                 }
@@ -72,7 +85,7 @@ namespace dispatch
                 //
                 // Push the keep alive task onto the queue
                 //
-                PostTask(
+                PostTaskInternal(
                     std::bind(&DispatcherBase::KeepAliveInternal, this)
                 );
             }
@@ -118,10 +131,33 @@ namespace dispatch
     }
 
     void
-    DispatcherBase::PostTask(const Callable& Entrypoint)
+    DispatcherBase::PostTaskInternal(
+        const Callable& Entrypoint
+    )
     {
         auto job = Job(std::move(Entrypoint), PRIORITY_NORMAL, this);
         m_Queue.push_back(std::move(job));
+        m_ReceivedTask = true;
+    }
+
+    void
+    DispatcherBase::PostTask(const Callable& Entrypoint)
+    {
+        //
+        // If we are currently on this dispatcher's thread
+        // then we can safely just append this job to our
+        // own queue. If not we need to take the mutex and
+        // append it to the wait queue
+        //
+        if (std::this_thread::get_id() == m_Thread.get_id())
+        {
+            PostTaskInternal(Entrypoint);
+        }
+        else
+        {
+            std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
+            m_CrossThread.push_back(std::move(Entrypoint));
+        }
     }
 
 }

@@ -1,10 +1,15 @@
+#include <assert.h>
 #include <iostream>
 #include <thread>
 #include "DispatchQueue.hpp"
 
 #define PRIMARY "primary"
+#define SECONDARY "secondary"
 #define TASK1 "First Task"
 #define TASK2 "Second Task"
+#define TASK3 "Third Task"
+#define TASK4 "Fourth Task"
+#define TASK5 "Fifth Task"
 
 void Test(const std::string Argument)
 {
@@ -14,16 +19,39 @@ void Test(const std::string Argument)
             std::bind(&Test, TASK2)
         );
     }
+    else if (Argument == TASK2)
+    {
+        dispatch::PostTaskToDispatcher(
+            SECONDARY,
+            std::bind(&Test, TASK3)
+        );
+    }
+    else if (Argument == TASK3)
+    {
+        dispatch::KeepAlive(false);
+        dispatch::PostTaskToDispatcher(
+            PRIMARY,
+            dispatch::bind(&Test, TASK4)
+        );
+    }
+    else if (Argument == TASK4)
+    {
+        assert(dispatch::OnDispatcher(PRIMARY));
+        dispatch::End();
+    }
 }
 
 int main(){
 #ifdef DEBUG
     std::cout << "Running DEUBG build" << std::endl;
 #endif
+
     //
-    // Create an anonymous dispatcher
+    // Create the secondary dispatcher
     //
-    (void) dispatch::CreateDispatcher();
+    auto secondary = dispatch::CreateDispatcher(
+        SECONDARY
+    );
 
     //
     // Create the primary dispatcher
@@ -32,6 +60,8 @@ int main(){
         PRIMARY,
         dispatch::bind(&Test, TASK1)
     );
-    // dispatcher->Wait();
+    
+    dispatch::GlobalDispatcherWait();
+
     std::cout << "End of Main Thread" << std::endl;
 }

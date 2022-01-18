@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <deque>
+#include <mutex>
 #include <string>
 #include "Callable.hpp"
 #include "Job.hpp"
@@ -26,12 +27,16 @@ namespace dispatch{
         std::string GetName(void) { return IsAnonymous() ? "ANON" : m_Name; };
         bool IsAnonymous(void) { return m_Name.empty(); };
     private:
+        void PostTaskInternal(const Callable& Entrypoint);
         void KeepAliveInternal(void);
         void DispatchLoop(void);
         std::deque<Job> m_Queue;
+        std::mutex m_CrossThreadMutex;
+        std::deque<Callable> m_CrossThread;
         std::thread m_Thread;
         std::string m_Name;
-        bool m_KeepAlive = false;
+        bool m_ReceivedTask = false;
+        bool m_KeepAlive = true;
         bool m_Stop = false;
         bool m_Completed = false;
         std::atomic<bool> m_Waiting;
