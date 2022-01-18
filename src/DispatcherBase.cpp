@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <memory>
 #include <thread>
 #include <chrono>
@@ -14,14 +15,42 @@ namespace dispatch
 {
     extern thread_local DispatcherBase* ThreadQueue;
 
-    DispatcherBase::DispatcherBase(Callable& Job)
+    DispatcherBase::DispatcherBase(
+        const Callable& Entrypoint
+    )
     {
-        PostTask(Job);
+        PostTask(Entrypoint);
     }
 
-    void DispatcherBase::Wait(void)
+    DispatcherBase::DispatcherBase(
+        const std::string& Name,
+        const Callable& Entrypoint
+    )
     {
+        m_Name = Name;
+        PostTask(Entrypoint);
+    }
+
+    bool
+    DispatcherBase::Wait(
+        void
+    )
+    {
+        if (m_Waiting)
+        {
+            return false;
+        }
+
+        m_Waiting = true;
         m_Thread.join();
+        return true;
+    }
+
+    void
+    DispatcherBase::KeepAliveInternal(void)
+    {
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(200ms);
     }
 
     void
@@ -32,13 +61,20 @@ namespace dispatch
         {
             if (m_Queue.size() == 0)
             {
-                if (m_Stop == true)
+                //
+                // Check if we kill this dispatcher
+                //
+                if (m_Stop == true || m_KeepAlive == false)
                 {
                     break;
                 }
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(200ms);
-                continue;
+                
+                //
+                // Push the keep alive task onto the queue
+                //
+                PostTask(
+                    std::bind(&DispatcherBase::KeepAliveInternal, this)
+                );
             }
 
             auto callable = std::move(m_Queue.front());
@@ -56,8 +92,15 @@ namespace dispatch
 
     DispatcherBase::~DispatcherBase(void)
     {
-        m_Thread.join();
-        std::cerr << "Dispatcher terminating" << std::endl;
+        //
+        // Check if someone is already waiting on us
+        // if not, we can join ourself to cleanup the thread
+        //
+        this->Wait();
+
+#ifdef DEBUG
+        std::cerr << "Dispatcher \"" << GetName() << "\" terminating" << std::endl;
+#endif
     }
 
     void

@@ -6,13 +6,16 @@
 #include <string>
 #include <mutex>
 #include <algorithm>
+#include <vector>
 
 #include "DispatchQueue.hpp"
 
 namespace dispatch
 {
     std::mutex g_DispatcherMutex;
-    std::map<std::string, std::shared_ptr<DispatcherBase>> g_Dispatchers;
+    std::map<std::string, DispatcherPtr> g_Dispatchers;
+    std::vector<DispatcherPtr> g_AnonymousDispatchers;
+
     thread_local DispatcherBase* ThreadQueue = nullptr;
 
     DispatcherBase*
@@ -21,27 +24,60 @@ namespace dispatch
         return ThreadQueue;
     }
 
-    std::shared_ptr<DispatcherBase>
-    CreateDispatcher(std::string Name, Callable& Entrypoint)
+    DispatcherPtr
+    CreateDispatcher(
+        const std::string& Name,
+        const Callable& Entrypoint
+    )
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
-        auto queue = std::make_shared<DispatcherBase>(std::ref(Entrypoint));
-        g_Dispatchers[Name] = queue;
-        queue->Run();
-        return queue;
+        auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
+        g_Dispatchers[Name] = dispatcher;
+        dispatcher->Run();
+        return dispatcher;
     }
 
-    std::shared_ptr<DispatcherBase>
-    CreateDispatcher(std::string Name)
+    DispatcherPtr
+    CreateDispatcher(
+        const std::string& Name
+    )
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
-        auto queue = std::make_shared<DispatcherBase>();
-        g_Dispatchers[Name] = queue;
-        queue->Run();
-        return queue;
+        auto dispatcher = std::make_shared<DispatcherBase>(Name);
+        g_Dispatchers[Name] = dispatcher;
+        dispatcher->Run();
+        return dispatcher;
     }
 
-    std::shared_ptr<DispatcherBase>
+    DispatcherPtr
+    CreateDispatcher(
+        void
+    )
+    /*++
+    Create an anonymous dispatcher. This will not be added to the
+    global named map but will be tracked in a separate vector
+    --*/
+    {
+        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
+        auto dispatcher = std::make_shared<DispatcherBase>();
+        g_AnonymousDispatchers.push_back(dispatcher);
+        dispatcher->Run();
+        return dispatcher;
+    }
+
+    DispatcherPtr
+    CreateDispatcher(
+        const Callable& Entrypoint
+    )
+    {
+        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
+        auto dispatcher = std::make_shared<DispatcherBase>(std::ref(Entrypoint));
+        g_AnonymousDispatchers.push_back(dispatcher);
+        dispatcher->Run();
+        return dispatcher;
+    }
+
+    DispatcherPtr
     GetDispatcher(std::string Name)
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
@@ -49,10 +85,19 @@ namespace dispatch
     }
 
     void
-    PostTaskToDispatcher(std::string Name, const Callable& Job)
+    PostTaskToDispatcher(const std::string& Name, const Callable& Job)
     {
         auto dispatcher = GetDispatcher(Name);
-        dispatcher->PostTask(Job);
+        PostTaskToDispatcher(dispatcher, Job);
+    }
+
+    void
+    PostTask(
+        const Callable& Job
+    )
+    {
+        auto dispatcher = ThreadQueue;
+        PostTaskToDispatcher(dispatcher, Job);
     }
 
     void
