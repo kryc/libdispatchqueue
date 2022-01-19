@@ -10,6 +10,9 @@
 
 namespace dispatch{
 
+    class DispatcherBase;
+    using DestructionHandler = std::function<void(DispatcherBase*)>;
+
     class DispatcherBase
     {
     public:
@@ -29,6 +32,7 @@ namespace dispatch{
         bool Completed(void) { return m_Completed; };
         std::string GetName(void) { return IsAnonymous() ? "ANON" : m_Name; };
         bool IsAnonymous(void) { return m_Name.empty(); };
+        void SetDestructionHandler(DestructionHandler Handler) { m_DestructionHandler = Handler; };
     private:
         void KeepAliveInternal(void);
         void DispatchLoop(void);
@@ -42,6 +46,8 @@ namespace dispatch{
         bool m_Stop = false;
         bool m_Completed = false;
         std::atomic<bool> m_Waiting;
+
+        DestructionHandler m_DestructionHandler;
 
         std::mutex m_ConditionMutex;
         std::condition_variable m_TaskAvailable;

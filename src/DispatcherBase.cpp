@@ -114,6 +114,12 @@ namespace dispatch
         // being joinable
         //
         m_Completed = true;
+
+        //
+        // Notify the callback
+        //
+        if (m_DestructionHandler)
+            m_DestructionHandler(this);
     }
 
     DispatcherBase::~DispatcherBase(void)
@@ -122,7 +128,7 @@ namespace dispatch
         // Check if someone is already waiting on us
         // if not, we can join ourself to cleanup the thread
         //
-        this->Wait();
+        Wait();
 
 #ifdef DEBUG
         std::cerr << "Dispatcher \"" << GetName() << "\" terminating" << std::endl;

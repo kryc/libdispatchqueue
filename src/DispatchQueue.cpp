@@ -7,6 +7,8 @@
 #include <mutex>
 #include <algorithm>
 #include <vector>
+#include <assert.h>
+#include <condition_variable>
 
 #include "DispatchQueue.hpp"
 
@@ -16,7 +18,40 @@ namespace dispatch
     std::map<std::string, DispatcherPtr> g_Dispatchers;
     std::vector<DispatcherPtr> g_AnonymousDispatchers;
 
+    std::mutex g_GlobalWaitMutex;
+    std::condition_variable g_GlobalWaitCondition;
+
     thread_local DispatcherBase* ThreadQueue = nullptr;
+
+    void
+    OnDispatcherDestroyed(DispatcherBase* Dispatcher)
+    {
+        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
+        for (auto dispatcher = g_Dispatchers.begin(); dispatcher != g_Dispatchers.end(); dispatcher++)
+        {
+            if (std::get<1>(*dispatcher).get() == Dispatcher)
+            {
+                assert(Dispatcher->Completed());
+                std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
+                g_Dispatchers.erase(dispatcher);
+                lk.unlock();
+                g_GlobalWaitCondition.notify_one();
+                break;
+            }
+        }
+        for (auto dispatcher = g_AnonymousDispatchers.begin(); dispatcher != g_AnonymousDispatchers.end(); dispatcher++)
+        {
+            if (dispatcher->get() == Dispatcher)
+            {
+                assert(Dispatcher->Completed());
+                std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
+                g_AnonymousDispatchers.erase(dispatcher);
+                lk.unlock();
+                g_GlobalWaitCondition.notify_one();
+                break;
+            }
+        }
+    }
 
     DispatcherBase*
     CurrentQueue(void)
@@ -33,6 +68,7 @@ namespace dispatch
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
         g_Dispatchers[Name] = dispatcher;
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         dispatcher->Run();
         return dispatcher;
     }
@@ -45,6 +81,7 @@ namespace dispatch
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         auto dispatcher = std::make_shared<DispatcherBase>(Name);
         g_Dispatchers[Name] = dispatcher;
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         dispatcher->Run();
         return dispatcher;
     }
@@ -61,6 +98,7 @@ namespace dispatch
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         auto dispatcher = std::make_shared<DispatcherBase>();
         g_AnonymousDispatchers.push_back(dispatcher);
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         dispatcher->Run();
         return dispatcher;
     }
@@ -73,6 +111,7 @@ namespace dispatch
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         auto dispatcher = std::make_shared<DispatcherBase>(std::ref(Entrypoint));
         g_AnonymousDispatchers.push_back(dispatcher);
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         dispatcher->Run();
         return dispatcher;
     }
@@ -198,35 +237,8 @@ namespace dispatch
         void
     )
     {
-        using namespace std::chrono_literals;
-        for (;;)
-        {
-            g_DispatcherMutex.lock();
-            for (auto dispatcher = g_Dispatchers.begin(); dispatcher != g_Dispatchers.end(); dispatcher++)
-            {
-                if (std::get<1>(*dispatcher)->Completed())
-                {
-                    g_Dispatchers.erase(dispatcher);
-                    break;
-                }
-            }
-            for (auto dispatcher = g_AnonymousDispatchers.begin(); dispatcher != g_AnonymousDispatchers.end(); dispatcher++)
-            {
-                if (dispatcher->get()->Completed())
-                {
-                    g_AnonymousDispatchers.erase(dispatcher);
-                    break;
-                }
-            }
-
-            if (g_Dispatchers.size() == 0 && g_AnonymousDispatchers.size() == 0)
-            {
-                g_DispatcherMutex.unlock();
-                break;
-            }
-            g_DispatcherMutex.unlock();
-            std::this_thread::sleep_for(200ms);
-        }
+        std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
+        g_GlobalWaitCondition.wait(lk, []{ return g_Dispatchers.size() == 0 && g_AnonymousDispatchers.size() == 0; });
     }
 
 }
