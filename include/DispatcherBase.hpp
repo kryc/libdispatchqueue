@@ -3,6 +3,7 @@
 #include <atomic>
 #include <deque>
 #include <mutex>
+#include <condition_variable>
 #include <string>
 #include "Callable.hpp"
 #include "Job.hpp"
@@ -41,6 +42,9 @@ namespace dispatch{
         bool m_Stop = false;
         bool m_Completed = false;
         std::atomic<bool> m_Waiting;
+
+        std::mutex m_ConditionMutex;
+        std::condition_variable m_TaskAvailable;
     };
 
 }

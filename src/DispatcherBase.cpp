@@ -51,8 +51,15 @@ namespace dispatch
     void
     DispatcherBase::KeepAliveInternal(void)
     {
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(200ms);
+        std::unique_lock<std::mutex> lk(m_ConditionMutex);
+        //
+        // We will only ever need to wake if a task
+        // is posted to the cross thread queue as
+        // m_Queue can only be posted to by the current
+        // thread (which is waiting...)
+        //
+        m_TaskAvailable.wait(lk, [this]{
+            return m_CrossThread.size() > 0 /*|| m_Queue.size() > 0*/;});
     }
 
     void
@@ -149,7 +156,10 @@ namespace dispatch
         else
         {
             std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
+            std::unique_lock<std::mutex> lk(m_ConditionMutex);
             m_CrossThread.push_back(std::move(TaskJob));
+            lk.unlock();
+            m_TaskAvailable.notify_one();
         }
     }
 
@@ -172,10 +182,9 @@ namespace dispatch
     {
         assert(std::this_thread::get_id() != m_Thread.get_id());
         
-        std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);
-        m_CrossThread.push_back(std::move(job));
+        PostTask(job);
     }
 
 }
