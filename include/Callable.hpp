@@ -4,7 +4,7 @@
 
 namespace dispatch{
 
-    using Callable = std::function<void()>;
+    using Callable = std::function<void(void)>;
 
     template<class... Args>
     Callable bind(Args&&... x)

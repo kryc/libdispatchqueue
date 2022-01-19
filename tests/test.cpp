@@ -10,6 +10,8 @@
 #define TASK3 "Third Task"
 #define TASK4 "Fourth Task"
 #define TASK5 "Fifth Task"
+#define TASK6 "Sixth Task"
+#define LASTTASK "Last Task"
 
 void Test(const std::string Argument)
 {
@@ -28,13 +30,24 @@ void Test(const std::string Argument)
     }
     else if (Argument == TASK3)
     {
-        dispatch::KeepAlive(false);
         dispatch::PostTaskToDispatcher(
             PRIMARY,
             dispatch::bind(&Test, TASK4)
         );
     }
     else if (Argument == TASK4)
+    {
+        dispatch::PostTaskAndReply(
+            SECONDARY,
+            std::bind(&Test, TASK5),
+            std::bind(&Test, LASTTASK)
+        );
+    }
+    else if (Argument == TASK5)
+    {
+        dispatch::KeepAlive(false);
+    }
+    else if (Argument == LASTTASK)
     {
         assert(dispatch::OnDispatcher(PRIMARY));
         dispatch::End();

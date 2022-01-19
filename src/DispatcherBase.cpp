@@ -66,7 +66,7 @@ namespace dispatch
                 std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
                 for (auto& callable : m_CrossThread)
                 {
-                    PostTaskInternal(std::move(callable));
+                    PostTask(callable);
                 }
                 m_CrossThread.clear();
             }
@@ -85,14 +85,20 @@ namespace dispatch
                 //
                 // Push the keep alive task onto the queue
                 //
-                PostTaskInternal(
+                PostTask(
                     std::bind(&DispatcherBase::KeepAliveInternal, this)
                 );
             }
 
-            auto callable = std::move(m_Queue.front());
+            auto job = std::move(m_Queue.front());
             m_Queue.pop_front();
-            callable();
+            job();
+            if (job.HasReply())
+            {
+                auto reply = job.GetReply();
+                auto dispatcher = (DispatcherBase*)reply->GetDispatcher();
+                dispatcher->PostTask(*reply);
+            }
         }
 
         //
@@ -131,33 +137,45 @@ namespace dispatch
     }
 
     void
-    DispatcherBase::PostTaskInternal(
-        const Callable& Entrypoint
+    DispatcherBase::PostTask(
+        Job& TaskJob
     )
     {
-        auto job = Job(std::move(Entrypoint), PRIORITY_NORMAL, this);
-        m_Queue.push_back(std::move(job));
-        m_ReceivedTask = true;
-    }
-
-    void
-    DispatcherBase::PostTask(const Callable& Entrypoint)
-    {
-        //
-        // If we are currently on this dispatcher's thread
-        // then we can safely just append this job to our
-        // own queue. If not we need to take the mutex and
-        // append it to the wait queue
-        //
         if (std::this_thread::get_id() == m_Thread.get_id())
         {
-            PostTaskInternal(Entrypoint);
+            m_Queue.push_back(std::move(TaskJob));
+            m_ReceivedTask = true;
         }
         else
         {
             std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
-            m_CrossThread.push_back(std::move(Entrypoint));
+            m_CrossThread.push_back(std::move(TaskJob));
         }
+    }
+
+    void
+    DispatcherBase::PostTask(
+        const Callable& Task,
+        const TaskPriority Priority
+    )
+    {
+        auto job = Job(std::move(Task), Priority, this);
+        PostTask(job);
+    }
+
+    void
+    DispatcherBase::PostTaskAndReply(
+        const Callable& Task,
+        const Callable& Reply,
+        const TaskPriority Priority
+    )
+    {
+        assert(std::this_thread::get_id() != m_Thread.get_id());
+        
+        std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
+        auto reply = Job(std::move(Reply), Priority, ThreadQueue);
+        auto job = Job(std::move(Task), Priority, this, reply);
+        m_CrossThread.push_back(std::move(job));
     }
 
 }

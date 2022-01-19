@@ -54,8 +54,8 @@ namespace dispatch
         void
     )
     /*++
-    Create an anonymous dispatcher. This will not be added to the
-    global named map but will be tracked in a separate vector
+      Create an anonymous dispatcher. This will not be added to the
+      global named map but will be tracked in a separate vector
     --*/
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
@@ -121,6 +121,27 @@ namespace dispatch
     )
     {
         Dispatcher->PostTask(std::move(Job));
+    }
+
+    void
+    PostTaskAndReply(
+        DispatcherPtr Dispatcher,
+        const Callable& Job,
+        const Callable& Reply
+    )
+    {
+        Dispatcher->PostTaskAndReply(std::move(Job), std::move(Reply));
+    }
+
+    void
+    PostTaskAndReply(
+        const std::string& Name,
+        const Callable& Job,
+        const Callable& Reply
+    )
+    {
+        auto dispatcher = GetDispatcher(Name);
+        PostTaskAndReply(dispatcher, Job, Reply);
     }
 
     void
