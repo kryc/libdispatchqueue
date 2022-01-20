@@ -13,6 +13,7 @@
 #define TASK5 "Fifth Task"
 #define TASK6 "Sixth Task"
 #define LASTTASK "Last Task"
+#define EXTRATASK "Extra Task"
 
 using CallbackProto = std::function<void(std::string)>;
 
@@ -30,6 +31,9 @@ void Test(const std::string Argument)
     if (Argument == TASK1){
         dispatch::PostTask(
             dispatch::bind(&Test, TASK2)
+        );
+        dispatch::PostTask(
+            dispatch::bind(&Test, EXTRATASK)
         );
     }
     else if (Argument == TASK2)
