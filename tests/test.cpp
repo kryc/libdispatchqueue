@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <functional>
 #include <iostream>
 #include <thread>
 #include "DispatchQueue.hpp"
@@ -13,19 +14,29 @@
 #define TASK6 "Sixth Task"
 #define LASTTASK "Last Task"
 
+using CallbackProto = std::function<void(std::string)>;
+
+void Callback(
+    const CallbackProto Callback,
+    const std::string Argument
+)
+{
+    Callback(Argument);
+}
+
 void Test(const std::string Argument)
 {
-    std::cout << '[' << std::this_thread::get_id() << "] " << Argument << std::endl;
+    std::cout << std::hex << '[' << std::this_thread::get_id() << "] " << Argument << std::endl;
     if (Argument == TASK1){
         dispatch::PostTask(
-            std::bind(&Test, TASK2)
+            dispatch::bind(&Test, TASK2)
         );
     }
     else if (Argument == TASK2)
     {
         dispatch::PostTaskToDispatcher(
             SECONDARY,
-            std::bind(&Test, TASK3)
+            dispatch::bind(&Test, TASK3)
         );
     }
     else if (Argument == TASK3)
@@ -39,8 +50,11 @@ void Test(const std::string Argument)
     {
         dispatch::PostTaskAndReply(
             SECONDARY,
-            std::bind(&Test, TASK5),
-            std::bind(&Test, LASTTASK)
+            dispatch::bind(
+                &Callback,
+                dispatch::bindf<CallbackProto>(&Test, std::placeholders::_1),
+                TASK5),
+            dispatch::bind(&Test, LASTTASK)
         );
     }
     else if (Argument == TASK5)

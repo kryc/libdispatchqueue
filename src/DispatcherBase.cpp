@@ -119,7 +119,9 @@ namespace dispatch
         // Notify the callback
         //
         if (m_DestructionHandler)
+        {
             m_DestructionHandler(this);
+        }
     }
 
     DispatcherBase::~DispatcherBase(void)
