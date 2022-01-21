@@ -47,7 +47,7 @@ namespace dispatch
     void
     DispatcherBase::KeepAliveInternal(void)
     {
-        std::unique_lock<std::mutex> lk(m_ConditionMutex);
+        std::unique_lock<std::mutex> lk(m_CrossThreadMutex);
         //
         // We will only ever need to wake if a task
         // is posted to the cross thread queue as
@@ -55,7 +55,8 @@ namespace dispatch
         // thread (which is waiting...)
         //
         m_TaskAvailable.wait(lk, [this]{
-            return m_CrossThread.size() > 0 /*|| m_Queue.size() > 0*/;});
+            return m_CrossThread.size() > 0;}
+        );
     }
 
     void
@@ -172,10 +173,10 @@ namespace dispatch
         }
         else
         {
-            std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
-            std::unique_lock<std::mutex> lk(m_ConditionMutex);
-            m_CrossThread.push_back(std::move(TaskJob));
-            lk.unlock();
+            {
+                std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
+                m_CrossThread.push_back(std::move(TaskJob));
+            }
             m_TaskAvailable.notify_one();
         }
     }

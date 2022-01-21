@@ -71,8 +71,8 @@ namespace dispatch
         g_TotalDispatchers++;
     }
 
-    void
-    EnterDispatcher(
+    DispatcherPtr
+    CreateAndEnterDispatcher(
         const std::string& Name,
         const Callable& Entrypoint)
     {
@@ -81,6 +81,7 @@ namespace dispatch
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         TrackDispatcher(Name, dispatcher);
         dispatcher->Enter();
+        return dispatcher;
     }
 
     DispatcherPtr

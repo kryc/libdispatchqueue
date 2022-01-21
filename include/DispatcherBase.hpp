@@ -37,6 +37,7 @@ namespace dispatch{
         std::deque<Job> m_Queue;
         std::mutex m_CrossThreadMutex;
         std::deque<Job> m_CrossThread;
+        std::condition_variable m_TaskAvailable;
         std::thread m_Thread;
         std::thread::id m_ThreadId;
         std::string m_Name;
@@ -47,9 +48,6 @@ namespace dispatch{
         std::atomic<bool> m_Waiting;
 
         DestructionHandler m_DestructionHandler;
-
-        std::mutex m_ConditionMutex;
-        std::condition_variable m_TaskAvailable;
     };
 
 }
