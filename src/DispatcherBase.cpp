@@ -18,13 +18,6 @@ namespace dispatch
     extern thread_local DispatcherBase* ThreadQueue;
 
     DispatcherBase::DispatcherBase(
-        const Callable& Entrypoint
-    )
-    {
-        PostTask(Entrypoint);
-    }
-
-    DispatcherBase::DispatcherBase(
         const std::string& Name,
         const Callable& Entrypoint
     )

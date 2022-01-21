@@ -16,9 +16,7 @@ namespace dispatch{
     class DispatcherBase
     {
     public:
-        DispatcherBase(void) = default;
-        DispatcherBase(const std::string& Name) : m_Name(Name){};
-        DispatcherBase(const Callable& Entrypoint);
+        DispatcherBase(void) = delete;
         DispatcherBase(const std::string& Name, const Callable& Entrypoint);
         ~DispatcherBase(void);
         void Run(void);
@@ -30,8 +28,7 @@ namespace dispatch{
         void KeepAlive(const bool KeepAlive) { m_KeepAlive = KeepAlive; };
         bool Stopped(void) { return m_Completed; };
         bool Completed(void) { return m_Completed; };
-        std::string GetName(void) { return IsAnonymous() ? "ANON" : m_Name; };
-        bool IsAnonymous(void) { return m_Name.empty(); };
+        std::string GetName(void) { return m_Name; };
         void SetDestructionHandler(DestructionHandler Handler) { m_DestructionHandler = Handler; };
     private:
         void KeepAliveInternal(void);

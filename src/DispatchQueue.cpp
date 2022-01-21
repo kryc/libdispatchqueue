@@ -1,3 +1,4 @@
+#include <atomic>
 #include <memory>
 #include <thread>
 #include <chrono>
@@ -9,6 +10,7 @@
 #include <vector>
 #include <assert.h>
 #include <condition_variable>
+#include <sstream>
 
 #include "DispatchQueue.hpp"
 
@@ -17,14 +19,17 @@ namespace dispatch
     std::mutex g_DispatcherMutex;
     std::map<std::string, DispatcherPtr> g_Dispatchers;
     std::vector<DispatcherPtr> g_AnonymousDispatchers;
+    std::vector<DispatcherBase*> g_CompletedDispatchers;
 
-    std::mutex g_GlobalWaitMutex;
+    std::atomic<size_t> g_ActiveDispatcherCount = 0;
+    std::atomic<size_t> g_TotalDispatchers = 0;
+
     std::condition_variable g_GlobalWaitCondition;
 
     thread_local DispatcherBase* ThreadQueue = nullptr;
 
     void
-    OnDispatcherDestroyed(DispatcherBase* Dispatcher)
+    RemoveDispatcher(DispatcherBase* Dispatcher)
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         for (auto dispatcher = g_Dispatchers.begin(); dispatcher != g_Dispatchers.end(); dispatcher++)
@@ -32,10 +37,7 @@ namespace dispatch
             if (std::get<1>(*dispatcher).get() == Dispatcher)
             {
                 assert(Dispatcher->Completed());
-                std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
                 g_Dispatchers.erase(dispatcher);
-                lk.unlock();
-                g_GlobalWaitCondition.notify_one();
                 break;
             }
         }
@@ -44,13 +46,21 @@ namespace dispatch
             if (dispatcher->get() == Dispatcher)
             {
                 assert(Dispatcher->Completed());
-                std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
                 g_AnonymousDispatchers.erase(dispatcher);
-                lk.unlock();
-                g_GlobalWaitCondition.notify_one();
                 break;
             }
         }
+    }
+
+    void
+    OnDispatcherDestroyed(DispatcherBase* Dispatcher)
+    {
+        {
+            std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
+            g_CompletedDispatchers.push_back(Dispatcher);
+            g_ActiveDispatcherCount--;
+        }
+        g_GlobalWaitCondition.notify_one();
     }
 
     DispatcherBase*
@@ -69,8 +79,16 @@ namespace dispatch
         auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
         g_Dispatchers[Name] = dispatcher;
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
+        g_ActiveDispatcherCount++;
+        g_TotalDispatchers++;
         dispatcher->Run();
         return dispatcher;
+    }
+
+    void
+    NullEntrypoint(void)
+    {
+        return;
     }
 
     DispatcherPtr
@@ -78,12 +96,17 @@ namespace dispatch
         const std::string& Name
     )
     {
-        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
-        auto dispatcher = std::make_shared<DispatcherBase>(Name);
-        g_Dispatchers[Name] = dispatcher;
-        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
-        dispatcher->Run();
-        return dispatcher;
+        return CreateDispatcher(Name, dispatch::bind(&NullEntrypoint));
+    }
+
+    DispatcherPtr
+    CreateDispatcher(
+        const Callable& Entrypoint
+    )
+    {
+        std::stringstream name;
+        name << "anonymous" << g_TotalDispatchers++;
+        return CreateDispatcher(name.str(), Entrypoint);
     }
 
     DispatcherPtr
@@ -95,25 +118,9 @@ namespace dispatch
       global named map but will be tracked in a separate vector
     --*/
     {
-        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
-        auto dispatcher = std::make_shared<DispatcherBase>();
-        g_AnonymousDispatchers.push_back(dispatcher);
-        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
-        dispatcher->Run();
-        return dispatcher;
-    }
-
-    DispatcherPtr
-    CreateDispatcher(
-        const Callable& Entrypoint
-    )
-    {
-        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
-        auto dispatcher = std::make_shared<DispatcherBase>(std::ref(Entrypoint));
-        g_AnonymousDispatchers.push_back(dispatcher);
-        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
-        dispatcher->Run();
-        return dispatcher;
+        std::stringstream name;
+        name << "anonymous" << g_TotalDispatchers++;
+        return CreateDispatcher(name.str());
     }
 
     DispatcherPtr
@@ -237,8 +244,8 @@ namespace dispatch
         void
     )
     {
-        std::unique_lock<std::mutex> lk(g_GlobalWaitMutex);
-        g_GlobalWaitCondition.wait(lk, []{ return g_Dispatchers.size() == 0 && g_AnonymousDispatchers.size() == 0; });
+        std::unique_lock<std::mutex> lk(g_DispatcherMutex);
+        g_GlobalWaitCondition.wait(lk, []{ return g_ActiveDispatcherCount == 0; });
     }
 
 }
