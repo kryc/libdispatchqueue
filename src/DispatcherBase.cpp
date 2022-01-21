@@ -37,7 +37,10 @@ namespace dispatch
         }
 
         m_Waiting = true;
-        m_Thread.join();
+        if (m_Thread.joinable())
+        {
+            m_Thread.join();
+        }
         return true;
     }
 
@@ -59,6 +62,8 @@ namespace dispatch
     DispatcherBase::DispatchLoop(void)
     {
         ThreadQueue = this;
+        m_ThreadId = std::this_thread::get_id();
+
         for (;;)
         {
             if (m_CrossThread.size() > 0)
@@ -89,7 +94,6 @@ namespace dispatch
                     std::bind(&DispatcherBase::KeepAliveInternal, this)
                 );
             }
-
             auto job = std::move(m_Queue.front());
             m_Queue.pop_front();
             job();
@@ -132,10 +136,22 @@ namespace dispatch
 
     void
     DispatcherBase::Run(void)
+    /*++
+      Start dispatcher on a new thread
+    --*/
     {
         m_Thread = std::thread(
             std::bind(&DispatcherBase::DispatchLoop, this)
         );
+    }
+
+    void
+    DispatcherBase::Enter(void)
+    /*++
+      Enter the dispatcher on the current thread
+    --*/
+    {
+        DispatchLoop();
     }
 
     void
@@ -149,7 +165,7 @@ namespace dispatch
         Job& TaskJob
     )
     {
-        if (std::this_thread::get_id() == m_Thread.get_id())
+        if (std::this_thread::get_id() == m_ThreadId)
         {
             m_Queue.push_back(std::move(TaskJob));
             m_ReceivedTask = true;
@@ -181,7 +197,7 @@ namespace dispatch
         const TaskPriority Priority
     )
     {
-        assert(std::this_thread::get_id() != m_Thread.get_id());
+        assert(std::this_thread::get_id() != m_ThreadId);
         
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);

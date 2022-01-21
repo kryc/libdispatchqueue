@@ -21,6 +21,7 @@ namespace dispatch
     DispatcherPtr CreateDispatcher(const Callable& EntryPoint);
     DispatcherPtr CreateDispatcher(const std::string& Name);
     DispatcherPtr CreateDispatcher(const std::string& Name, const Callable& EntryPoint);
+    void EnterDispatcher(const std::string& Name, const Callable& EntryPoint);
     DispatcherPtr GetDispatcher(std::string Name);
     void RemoveDispatcher(DispatcherBase* Dispatcher);
     void PostTaskToDispatcher(DispatcherPtr Dispatcher, const Callable& Job);

@@ -85,9 +85,9 @@ int main(){
     );
 
     //
-    // Create the primary dispatcher
+    // Create and enter the primary dispatcher
     //
-    auto dispatcher = dispatch::CreateDispatcher(
+    dispatch::EnterDispatcher(
         PRIMARY,
         dispatch::bind(&Test, TASK1)
     );

@@ -20,6 +20,7 @@ namespace dispatch{
         DispatcherBase(const std::string& Name, const Callable& Entrypoint);
         ~DispatcherBase(void);
         void Run(void);
+        void Enter(void);
         void PostTask(Job& TaskJob);
         void PostTask(const Callable& Task, const TaskPriority Priority = PRIORITY_NORMAL);
         void PostTaskAndReply(const Callable& Task, const Callable& Reply, const TaskPriority Priority = PRIORITY_NORMAL);
@@ -37,6 +38,7 @@ namespace dispatch{
         std::mutex m_CrossThreadMutex;
         std::deque<Job> m_CrossThread;
         std::thread m_Thread;
+        std::thread::id m_ThreadId;
         std::string m_Name;
         bool m_ReceivedTask = false;
         bool m_KeepAlive = true;

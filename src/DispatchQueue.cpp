@@ -18,7 +18,6 @@ namespace dispatch
 {
     std::mutex g_DispatcherMutex;
     std::map<std::string, DispatcherPtr> g_Dispatchers;
-    std::vector<DispatcherPtr> g_AnonymousDispatchers;
     std::vector<DispatcherBase*> g_CompletedDispatchers;
 
     std::atomic<size_t> g_ActiveDispatcherCount = 0;
@@ -41,15 +40,6 @@ namespace dispatch
                 break;
             }
         }
-        for (auto dispatcher = g_AnonymousDispatchers.begin(); dispatcher != g_AnonymousDispatchers.end(); dispatcher++)
-        {
-            if (dispatcher->get() == Dispatcher)
-            {
-                assert(Dispatcher->Completed());
-                g_AnonymousDispatchers.erase(dispatcher);
-                break;
-            }
-        }
     }
 
     void
@@ -69,18 +59,39 @@ namespace dispatch
         return ThreadQueue;
     }
 
+    static void
+    TrackDispatcher(
+        const std::string& Name,
+        DispatcherPtr Dispatcher
+    )
+    {
+        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
+        g_Dispatchers[Name] = Dispatcher;
+        g_ActiveDispatcherCount++;
+        g_TotalDispatchers++;
+    }
+
+    void
+    EnterDispatcher(
+        const std::string& Name,
+        const Callable& Entrypoint)
+    {
+        
+        auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
+        TrackDispatcher(Name, dispatcher);
+        dispatcher->Enter();
+    }
+
     DispatcherPtr
     CreateDispatcher(
         const std::string& Name,
         const Callable& Entrypoint
     )
     {
-        std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
         auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
-        g_Dispatchers[Name] = dispatcher;
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
-        g_ActiveDispatcherCount++;
-        g_TotalDispatchers++;
+        TrackDispatcher(Name, dispatcher);
         dispatcher->Run();
         return dispatcher;
     }
