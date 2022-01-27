@@ -1,11 +1,14 @@
 #include <assert.h>
 #include <functional>
 #include <iostream>
+#include <mutex>
+#include <sstream>
 #include <thread>
 #include "DispatchQueue.hpp"
 
 #define PRIMARY "primary"
 #define SECONDARY "secondary"
+#define POOL "pool"
 #define TASK1 "First Task"
 #define TASK2 "Second Task"
 #define TASK3 "Third Task"
@@ -14,8 +17,11 @@
 #define TASK6 "Sixth Task"
 #define LASTTASK "Last Task"
 #define EXTRATASK "Extra Task"
+#define POOLTASK "Pool Task "
 
 using CallbackProto = std::function<void(std::string)>;
+
+std::mutex g_PrintLock;
 
 void Callback(
     const CallbackProto Callback,
@@ -27,7 +33,10 @@ void Callback(
 
 void Test(const std::string Argument)
 {
-    std::cout << std::hex << '[' << std::this_thread::get_id() << "] " << Argument << std::endl;
+    {
+        std::lock_guard<std::mutex> mutex(g_PrintLock);
+        std::cout << std::hex << '[' << std::this_thread::get_id() << "] " << Argument << std::endl;
+    }
     if (Argument == TASK1){
         dispatch::PostTask(
             dispatch::bind(&Test, TASK2)
@@ -91,7 +100,22 @@ int main(){
         PRIMARY,
         dispatch::bind(&Test, TASK1)
     );
-    
+
+    //
+    // Create a dispatch pool
+    //
+    auto pool = dispatch::CreateDispatchPool(4, POOL);
+    for (size_t i = 0; i < 20; i++)
+    {
+        std::stringstream ss;
+        ss << POOLTASK << i+1;
+        pool->PostTask(
+            dispatch::bind(&Test, ss.str())
+        );
+    }
+
+    pool->Stop();
+
     dispatch::GlobalDispatcherWait();
 
     std::cout << "End of Main Thread" << std::endl;

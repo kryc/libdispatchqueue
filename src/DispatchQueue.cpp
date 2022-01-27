@@ -13,11 +13,12 @@
 #include <sstream>
 
 #include "DispatchQueue.hpp"
+#include "DispatchPool.hpp"
 
 namespace dispatch
 {
     std::mutex g_DispatcherMutex;
-    std::map<std::string, DispatcherPtr> g_Dispatchers;
+    std::map<std::string, DispatcherBasePtr> g_Dispatchers;
     std::vector<DispatcherBase*> g_CompletedDispatchers;
 
     std::atomic<size_t> g_ActiveDispatcherCount = 0;
@@ -62,7 +63,7 @@ namespace dispatch
     static void
     TrackDispatcher(
         const std::string& Name,
-        DispatcherPtr Dispatcher
+        DispatcherBasePtr Dispatcher
     )
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
@@ -71,26 +72,28 @@ namespace dispatch
         g_TotalDispatchers++;
     }
 
-    DispatcherPtr
+    DispatcherBasePtr
     CreateAndEnterDispatcher(
         const std::string& Name,
         const Callable& Entrypoint)
     {
         
-        auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
+        auto dispatcher = std::make_shared<Dispatcher>(Name);
+        dispatcher->PostTask(Entrypoint);
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         TrackDispatcher(Name, dispatcher);
         dispatcher->Enter();
         return dispatcher;
     }
 
-    DispatcherPtr
+    DispatcherBasePtr
     CreateDispatcher(
         const std::string& Name,
         const Callable& Entrypoint
     )
     {
-        auto dispatcher = std::make_shared<DispatcherBase>(Name, std::ref(Entrypoint));
+        auto dispatcher = std::make_shared<Dispatcher>(Name);
+        dispatcher->PostTask(Entrypoint);
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         TrackDispatcher(Name, dispatcher);
         dispatcher->Run();
@@ -103,7 +106,7 @@ namespace dispatch
         return;
     }
 
-    DispatcherPtr
+    DispatcherBasePtr
     CreateDispatcher(
         const std::string& Name
     )
@@ -111,7 +114,7 @@ namespace dispatch
         return CreateDispatcher(Name, dispatch::bind(&NullEntrypoint));
     }
 
-    DispatcherPtr
+    DispatcherBasePtr
     CreateDispatcher(
         const Callable& Entrypoint
     )
@@ -121,7 +124,7 @@ namespace dispatch
         return CreateDispatcher(name.str(), Entrypoint);
     }
 
-    DispatcherPtr
+    DispatcherBasePtr
     CreateDispatcher(
         void
     )
@@ -135,7 +138,20 @@ namespace dispatch
         return CreateDispatcher(name.str());
     }
 
-    DispatcherPtr
+    DispatcherPoolPtr
+    CreateDispatchPool(
+        const size_t Size,
+        const std::string& Name
+    )
+    {
+        auto dispatcher = std::make_shared<DispatchPool>(Size, Name);
+        dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
+        TrackDispatcher(Name, dispatcher);
+        dispatcher->Run();
+        return dispatcher;
+    }
+
+    DispatcherBasePtr
     GetDispatcher(std::string Name)
     {
         std::lock_guard<std::mutex> mutex(g_DispatcherMutex);
@@ -165,7 +181,7 @@ namespace dispatch
 
     void
     PostTaskToDispatcher(
-        DispatcherPtr Dispatcher,
+        DispatcherBasePtr Dispatcher,
         const Callable& Job
     )
     {
@@ -183,7 +199,7 @@ namespace dispatch
 
     void
     PostTaskAndReply(
-        DispatcherPtr Dispatcher,
+        DispatcherBasePtr Dispatcher,
         const Callable& Job,
         const Callable& Reply
     )

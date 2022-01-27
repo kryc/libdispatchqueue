@@ -24,12 +24,20 @@ set(CMAKE_CXX_FLAGS_DEBUG "-ggdb -fno-omit-frame-pointer -fsanitize=address -DDE
 # add the library
 file(GLOB LIBSOURCES "./src/*.cpp")
 add_library(dispatchqueue ${LIBSOURCES})
-target_include_directories(dispatchqueue PUBLIC "./include/")
+target_include_directories(dispatchqueue
+                            PUBLIC
+                                ./include/
+                            PRIVATE
+                                ./src/
+                        )
 
 # add the test
 file(GLOB TESTSOURCES "./tests/*.cpp")
 add_executable(test ${TESTSOURCES})
 target_link_libraries(test dispatchqueue)
-target_include_directories(test PUBLIC "./include/")
+target_include_directories(test
+                            PUBLIC
+                                ./include/
+                        )
 
 configure_file(Config.h.in Config.h)

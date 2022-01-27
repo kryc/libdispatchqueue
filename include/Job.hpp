@@ -5,12 +5,12 @@
 namespace dispatch
 {
 
-    typedef enum : char
+    enum class TaskPriority : char
     {
         PRIORITY_LOW = 3,
         PRIORITY_NORMAL = 2,
         PRIORITY_HIGH = 1
-    } TaskPriority;
+    };
 
     class Job
     {
@@ -35,7 +35,7 @@ namespace dispatch
         std::unique_ptr<Job> GetReply(void) { return std::move(m_Reply); };
     protected:
         const Callable m_Entrypoint;
-        const TaskPriority m_Priority = PRIORITY_NORMAL;
+        const TaskPriority m_Priority;
         const void* m_Dispatcher = nullptr;
         std::unique_ptr<Job> m_Reply;
     };

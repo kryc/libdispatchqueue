@@ -12,19 +12,11 @@
 #include <deque>
 
 #include "DispatcherBase.hpp"
+#include "Job.hpp"
 
 namespace dispatch
 {
     extern thread_local DispatcherBase* ThreadQueue;
-
-    DispatcherBase::DispatcherBase(
-        const std::string& Name,
-        const Callable& Entrypoint
-    )
-    {
-        m_Name = Name;
-        PostTask(Entrypoint);
-    }
 
     bool
     DispatcherBase::Wait(
@@ -72,7 +64,7 @@ namespace dispatch
                 std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
                 for (auto& callable : m_CrossThread)
                 {
-                    PostTask(callable);
+                    PostTask(std::move(callable));
                 }
                 m_CrossThread.clear();
             }
@@ -100,9 +92,9 @@ namespace dispatch
             job();
             if (job.HasReply())
             {
-                auto reply = job.GetReply();
-                auto dispatcher = (DispatcherBase*)reply->GetDispatcher();
-                dispatcher->PostTask(*reply);
+                auto reply = std::move(*job.GetReply());
+                auto dispatcher = (DispatcherBase*)reply.GetDispatcher();
+                dispatcher->PostTask(std::move(reply));
             }
         }
 
@@ -156,14 +148,25 @@ namespace dispatch
     }
 
     void
-    DispatcherBase::Stop(void)
+    DispatcherBase::StopTask(
+        void
+    )
     {
         m_Stop = true;
     }
 
     void
+    DispatcherBase::Stop(void)
+    {
+        PostTask(
+            dispatch::bind(&DispatcherBase::StopTask, this),
+            TaskPriority::PRIORITY_HIGH
+        );
+    }
+
+    void
     DispatcherBase::PostTask(
-        Job& TaskJob
+        Job TaskJob
     )
     {
         if (std::this_thread::get_id() == m_ThreadId)
@@ -182,17 +185,17 @@ namespace dispatch
     }
 
     void
-    DispatcherBase::PostTask(
+    Dispatcher::PostTask(
         const Callable& Task,
         const TaskPriority Priority
     )
     {
         auto job = Job(std::move(Task), Priority, this);
-        PostTask(job);
+        DispatcherBase::PostTask(std::move(job));
     }
 
     void
-    DispatcherBase::PostTaskAndReply(
+    Dispatcher::PostTaskAndReply(
         const Callable& Task,
         const Callable& Reply,
         const TaskPriority Priority
@@ -202,7 +205,7 @@ namespace dispatch
         
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);
-        PostTask(job);
+        PostTask(std::move(job));
     }
 
 }
