@@ -13,6 +13,7 @@ namespace dispatch{
 
     class DispatcherBase;
     using DestructionHandler = std::function<void(DispatcherBase*)>;
+    using CompletionHandler = std::function<void(DispatcherBase*)>;
 
     class DispatcherBase
     {
@@ -31,11 +32,11 @@ namespace dispatch{
         bool Completed(void) { return m_Completed; };
         std::string GetName(void) { return m_Name; };
         void SetDestructionHandler(DestructionHandler Handler) { m_DestructionHandler = Handler; };
+        void SetCompletionHandler(CompletionHandler Handler) { m_CompletionHandler = Handler; };
     protected:
         void PostTask(Job TaskJob);
-        void KeepAliveInternal(void);
-        void DispatchLoop(void);
-        void StopTask(void);
+        void NotifyCompletion(void) { if (m_CompletionHandler) m_CompletionHandler(this); };
+        void NotifyDestruction(void) { if (m_DestructionHandler) m_DestructionHandler(this); };
         std::deque<Job> m_Queue;
         std::mutex m_CrossThreadMutex;
         std::deque<Job> m_CrossThread;
@@ -47,8 +48,15 @@ namespace dispatch{
         bool m_KeepAlive = true;
         bool m_Stop = false;
         bool m_Completed = false;
+        size_t m_TasksCompleted = 0;
+        size_t m_Keepalives = 0;
         std::atomic<bool> m_Waiting;
+    private:
+        void StopTask(void);
+        void KeepAliveInternal(void);
+        void DispatchLoop(void);
 
+        CompletionHandler m_CompletionHandler;
         DestructionHandler m_DestructionHandler;
     };
 

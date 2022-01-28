@@ -23,7 +23,6 @@ namespace dispatch
         //
         // Configure counters
         //
-        m_NextDispatcher = 0;
         m_Active = count;
 
         //
@@ -38,11 +37,12 @@ namespace dispatch
                 std::bind(&DispatchPool::OnDispatcherTerminated, this, std::placeholders::_1)
             );
             dispatcher->Run();
+            m_FreeList.push_back(dispatcher.get());
             m_Dispatchers.push_back(std::move(dispatcher));
         }
     }
 
-    size_t
+    DispatcherBase*
     DispatchPool::Next(
         void
     )
@@ -51,11 +51,22 @@ namespace dispatch
       Base implementation is a simple round-robin
     --*/
     {
-        if (m_NextDispatcher >= m_Dispatchers.size())
+        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
+        
+        //
+        // Try and use the free list where possible
+        //
+        if (!m_FreeList.empty())
         {
-            m_NextDispatcher = 0;
+            auto dispatcher = m_FreeList.back();
+            m_FreeList.pop_back();
+            return dispatcher;
         }
-        return m_NextDispatcher++;
+
+        //
+        // Fallback to the last dispatcher
+        //
+        return m_Dispatchers.back().get();
     }
     
     void
@@ -67,7 +78,7 @@ namespace dispatch
       Post a task to the next dispatcher
     --*/
     {
-        m_Dispatchers.at(Next())->PostTask(Task, Priority);
+        Next()->PostTask(Task, Priority);
     }
 
     void
@@ -80,7 +91,7 @@ namespace dispatch
       Post a task with reply to the next dispatcher
     --*/
     {
-        m_Dispatchers.at(Next())->PostTaskAndReply(
+        Next()->PostTaskAndReply(
             Task,
             Reply,
             Priority
@@ -118,6 +129,15 @@ namespace dispatch
     }
 
     void
+    DispatchPool::OnDispatcherCompleted(
+        DispatcherBase* Dispatcher
+    )
+    {
+        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
+        m_FreeList.push_back(Dispatcher);
+    }
+
+    void
     DispatchPool::OnDispatcherTerminated(
         DispatcherBase* Dispatacher
     )
@@ -129,7 +149,7 @@ namespace dispatch
         m_Active--;
         if (m_Active == 0)
         {
-            m_DestructionHandler(this);
+            NotifyDestruction();
         }
     }
 }

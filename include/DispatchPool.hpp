@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include "DispatcherBase.hpp"
@@ -21,11 +22,13 @@ namespace dispatch
         void Stop(void) override;
         bool Wait(void) override;
     protected:
+        void OnDispatcherCompleted(DispatcherBase* Dispatcher);
         void OnDispatcherTerminated(DispatcherBase* Dispatacher);
     private:
-        size_t Next(void);
+        DispatcherBase* Next(void);
         std::vector<DispatcherUPtr> m_Dispatchers;
-        size_t m_NextDispatcher;
+        std::mutex m_FreeListMutex;
+        std::vector<DispatcherBase*> m_FreeList;
         std::atomic<size_t> m_Active;
     };
 

@@ -79,13 +79,19 @@ namespace dispatch
                 {
                     break;
                 }
+
+                //
+                // Notify the completion handler
+                //
+                NotifyCompletion();
                 
                 //
                 // Push the keep alive task onto the queue
                 //
                 PostTask(
-                    std::bind(&DispatcherBase::KeepAliveInternal, this)
+                    dispatch::bind(&DispatcherBase::KeepAliveInternal, this)
                 );
+                m_Keepalives++;
             }
             auto job = std::move(m_Queue.front());
             m_Queue.pop_front();
@@ -96,6 +102,7 @@ namespace dispatch
                 auto dispatcher = (DispatcherBase*)reply.GetDispatcher();
                 dispatcher->PostTask(std::move(reply));
             }
+            m_TasksCompleted++;
         }
 
         //
@@ -123,7 +130,7 @@ namespace dispatch
         Wait();
 
 #ifdef DEBUG
-        std::cerr << "Dispatcher \"" << GetName() << "\" terminating" << std::endl;
+        std::cerr << "Dispatcher \"" << GetName() << "\" terminating (compeleted " << m_TasksCompleted - m_Keepalives << " tasks)" << std::endl;
 #endif
     }
 
