@@ -140,11 +140,11 @@ namespace dispatch
 
     DispatcherPoolPtr
     CreateDispatchPool(
-        const size_t Size,
-        const std::string& Name
+        const std::string& Name,
+        const size_t Size
     )
     {
-        auto dispatcher = std::make_shared<DispatchPool>(Size, Name);
+        auto dispatcher = std::make_shared<DispatchPool>(Name, Size);
         dispatcher->SetDestructionHandler(std::bind(&OnDispatcherDestroyed, std::placeholders::_1));
         TrackDispatcher(Name, dispatcher);
         dispatcher->Run();

@@ -104,8 +104,8 @@ int main(){
     //
     // Create a dispatch pool
     //
-    auto pool = dispatch::CreateDispatchPool(4, POOL);
-    for (size_t i = 0; i < 20; i++)
+    auto pool = dispatch::CreateDispatchPool(POOL);
+    for (size_t i = 0; i < 10; i++)
     {
         std::stringstream ss;
         ss << POOLTASK << i+1;

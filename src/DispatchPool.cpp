@@ -8,12 +8,28 @@
 namespace dispatch
 {
 
-    DispatchPool::DispatchPool(const size_t Size, const std::string& Name)
+    DispatchPool::DispatchPool(const std::string& Name, const size_t Size)
     :DispatcherBase::DispatcherBase(Name)
     {
+        //
+        // Decide if we use the number of available cores
+        //
+        size_t count = Size;
+        if (count == 0)
+        {
+            count = std::thread::hardware_concurrency();
+        }
+
+        //
+        // Configure counters
+        //
         m_NextDispatcher = 0;
-        m_Active = Size;
-        for (size_t i = 0; i < Size; i++)
+        m_Active = count;
+
+        //
+        // Initialize the dispatchers
+        //
+        for (size_t i = 0; i < count; i++)
         {
             std::stringstream dispatcher_name;
             dispatcher_name << Name << "[" << i << "]";
