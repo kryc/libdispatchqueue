@@ -17,7 +17,7 @@ namespace dispatch
         void PostTask(const Callable& Task, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) override;
         void PostTaskAndReply(const Callable& Task, const Callable& Reply, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) override;
         ~DispatchPool(void) = default;
-        void Run(void) override;
+        void Run(void) override {return;};
         void Stop(void) override;
         bool Wait(void) override;
     protected:

@@ -30,6 +30,10 @@ namespace dispatch
     DispatchPool::Next(
         void
     )
+    /*++
+      Returns the next dispatcher to push tasks to.
+      Base implementation is a simple round-robin
+    --*/
     {
         if (m_NextDispatcher >= m_Dispatchers.size())
         {
@@ -43,8 +47,11 @@ namespace dispatch
         const Callable& Task,
         const TaskPriority Priority
     )
+    /*++
+      Post a task to the next dispatcher
+    --*/
     {
-        m_Dispatchers[Next()]->PostTask(Task, Priority);
+        m_Dispatchers.at(Next())->PostTask(Task, Priority);
     }
 
     void
@@ -53,8 +60,11 @@ namespace dispatch
         const Callable& Reply,
         const TaskPriority Priority
     )
+    /*++
+      Post a task with reply to the next dispatcher
+    --*/
     {
-        m_Dispatchers[Next()]->PostTaskAndReply(
+        m_Dispatchers.at(Next())->PostTaskAndReply(
             Task,
             Reply,
             Priority
@@ -62,17 +72,12 @@ namespace dispatch
     }
 
     void
-    DispatchPool::Run(
-        void
-    )
-    {
-        return;
-    }
-
-    void
     DispatchPool::Stop(
         void
     )
+    /*++
+      Request each of the dispatchers to stop
+    --*/
     {
         for (auto& dispatcher : m_Dispatchers)
         {
@@ -84,6 +89,10 @@ namespace dispatch
     DispatchPool::Wait(
         void
     )
+    /*++
+      Wait on each of the dispatchers. Only return
+      once all have completed
+    --*/
     {
         for (auto& dispatcher : m_Dispatchers)
         {
@@ -96,6 +105,10 @@ namespace dispatch
     DispatchPool::OnDispatcherTerminated(
         DispatcherBase* Dispatacher
     )
+    /*++
+      Callback for the termination of a dispatcher
+      Update active count and callback if zero
+    --*/
     {
         m_Active--;
         if (m_Active == 0)
