@@ -33,7 +33,7 @@ target_include_directories(dispatchqueue
 
 # add the test
 file(GLOB TESTSOURCES "./tests/*.cpp")
-add_executable(test ${TESTSOURCES})
+add_executable(test EXCLUDE_FROM_ALL ${TESTSOURCES})
 target_link_libraries(test dispatchqueue)
 target_include_directories(test
                             PUBLIC
