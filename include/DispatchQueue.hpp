@@ -13,8 +13,10 @@
 namespace dispatch
 {
     extern thread_local DispatcherBase* ThreadQueue;
+    extern thread_local DispatcherBase* ThreadDispatcher;
 
     DispatcherBase* CurrentQueue(void);
+    DispatcherBase* CurrentDispatcher(void);
 
     DispatcherBasePtr CreateDispatcher(void);
     DispatcherBasePtr CreateDispatcher(const Callable& EntryPoint);

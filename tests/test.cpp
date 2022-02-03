@@ -18,6 +18,7 @@
 #define LASTTASK "Last Task"
 #define EXTRATASK "Extra Task"
 #define POOLTASK "Pool Task "
+#define POOLSUBTASK "Pool Sub Task "
 
 using CallbackProto = std::function<void(std::string)>;
 
@@ -79,6 +80,20 @@ void Test(const std::string Argument)
         assert(dispatch::OnDispatcher(PRIMARY));
         dispatch::End();
     }
+    else if (Argument == POOLTASK "1")
+    {
+        for (auto i = 0; i < 5; i++)
+        {
+            std::stringstream ss;
+            ss << POOLSUBTASK << i+1;
+            dispatch::PostTask(
+                dispatch::bind(
+                    &Test,
+                    ss.str()
+                )
+            );
+        }
+    }
 }
 
 int main(){
@@ -104,7 +119,7 @@ int main(){
     //
     // Create a dispatch pool
     //
-    auto pool = dispatch::CreateDispatchPool(POOL);
+    auto pool = dispatch::CreateDispatchPool(POOL, 4);
     for (size_t i = 0; i < 10; i++)
     {
         std::stringstream ss;

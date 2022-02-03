@@ -33,6 +33,7 @@ namespace dispatch{
         std::string GetName(void) { return m_Name; };
         void SetDestructionHandler(DestructionHandler Handler) { m_DestructionHandler = Handler; };
         void SetCompletionHandler(CompletionHandler Handler) { m_CompletionHandler = Handler; };
+        void SetThreadDispatcher(DispatcherBase* Dispatcher);
     protected:
         void PostTask(Job TaskJob);
         void NotifyCompletion(void) { if (m_CompletionHandler) m_CompletionHandler(this); };
@@ -58,6 +59,7 @@ namespace dispatch{
 
         CompletionHandler m_CompletionHandler;
         DestructionHandler m_DestructionHandler;
+        DispatcherBase* m_ThreadDispatcher = nullptr;
     };
 
     class Dispatcher : public DispatcherBase

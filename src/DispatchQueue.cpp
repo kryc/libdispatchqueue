@@ -27,6 +27,7 @@ namespace dispatch
     std::condition_variable g_GlobalWaitCondition;
 
     thread_local DispatcherBase* ThreadQueue = nullptr;
+    thread_local DispatcherBase* ThreadDispatcher = nullptr;
 
     void
     RemoveDispatcher(DispatcherBase* Dispatcher)
@@ -58,6 +59,14 @@ namespace dispatch
     CurrentQueue(void)
     {
         return ThreadQueue;
+    }
+
+    DispatcherBase*
+    CurrentDispatcher(
+        void
+    )
+    {
+        return ThreadDispatcher == nullptr ? ThreadQueue : ThreadDispatcher;
     }
 
     static void
@@ -164,6 +173,15 @@ namespace dispatch
 
     void
     PostTaskToDispatcher(
+        DispatcherBasePtr Dispatcher,
+        const Callable& Job
+    )
+    {
+        Dispatcher->PostTask(std::move(Job));
+    }
+
+    void
+    PostTaskToDispatcher(
         const std::string& Name,
         const Callable& Job
     )
@@ -177,15 +195,6 @@ namespace dispatch
         {
             std::cerr << "Dispatcher " << Name << " not found" << std::endl;
         }
-    }
-
-    void
-    PostTaskToDispatcher(
-        DispatcherBasePtr Dispatcher,
-        const Callable& Job
-    )
-    {
-        Dispatcher->PostTask(std::move(Job));
     }
 
     void
@@ -226,7 +235,7 @@ namespace dispatch
       Post a task to the current task queue
       --*/
     {
-        auto dispatcher = ThreadQueue;
+        auto dispatcher = CurrentDispatcher();
         PostTaskToDispatcher(dispatcher, Job);
     }
 
@@ -239,7 +248,7 @@ namespace dispatch
       dispatcher. For anonymous dispatcher use ""
       --*/
     {
-        return ThreadQueue->GetName() == Name;
+        return CurrentDispatcher()->GetName() == Name;
     }
 
     void

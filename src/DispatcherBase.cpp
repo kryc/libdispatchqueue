@@ -17,6 +17,7 @@
 namespace dispatch
 {
     extern thread_local DispatcherBase* ThreadQueue;
+    extern thread_local DispatcherBase* ThreadDispatcher;
 
     bool
     DispatcherBase::Wait(
@@ -52,9 +53,22 @@ namespace dispatch
     }
 
     void
+    DispatcherBase::SetThreadDispatcher(
+        DispatcherBase* Dispatcher
+    )
+    {
+        m_ThreadDispatcher = Dispatcher;
+    }
+
+    void
     DispatcherBase::DispatchLoop(void)
     {
+        assert(ThreadQueue == nullptr);
         ThreadQueue = this;
+        if (m_ThreadDispatcher != nullptr)
+        {
+            ThreadDispatcher = m_ThreadDispatcher;
+        }
         m_ThreadId = std::this_thread::get_id();
 
         for (;;)
@@ -88,7 +102,7 @@ namespace dispatch
                 //
                 // Push the keep alive task onto the queue
                 //
-                PostTask(
+                this->PostTask(
                     dispatch::bind(&DispatcherBase::KeepAliveInternal, this)
                 );
                 m_Keepalives++;
@@ -141,7 +155,10 @@ namespace dispatch
     --*/
     {
         m_Thread = std::thread(
-            std::bind(&DispatcherBase::DispatchLoop, this)
+            std::bind(
+                &DispatcherBase::DispatchLoop,
+                this
+            )
         );
     }
 
@@ -165,8 +182,11 @@ namespace dispatch
     void
     DispatcherBase::Stop(void)
     {
-        PostTask(
-            dispatch::bind(&DispatcherBase::StopTask, this),
+        this->PostTask(
+            dispatch::bind(
+                &DispatcherBase::StopTask,
+                this
+            ),
             TaskPriority::PRIORITY_HIGH
         );
     }
@@ -198,7 +218,7 @@ namespace dispatch
     )
     {
         auto job = Job(std::move(Task), Priority, this);
-        DispatcherBase::PostTask(std::move(job));
+        this->DispatcherBase::PostTask(std::move(job));
     }
 
     void
@@ -212,7 +232,7 @@ namespace dispatch
         
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);
-        PostTask(std::move(job));
+        this->DispatcherBase::PostTask(std::move(job));
     }
 
 }

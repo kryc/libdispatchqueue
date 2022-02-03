@@ -33,6 +33,7 @@ namespace dispatch
             std::stringstream dispatcher_name;
             dispatcher_name << Name << "[" << i << "]";
             auto dispatcher = std::make_unique<Dispatcher>(dispatcher_name.str());
+            dispatcher->SetThreadDispatcher(this);
             dispatcher->SetDestructionHandler(
                 std::bind(&DispatchPool::OnDispatcherTerminated, this, std::placeholders::_1)
             );
@@ -66,7 +67,11 @@ namespace dispatch
         //
         // Fallback to the last dispatcher
         //
-        return m_Dispatchers.back().get();
+        auto dispatcher = std::move(m_Dispatchers.back());
+        auto rawptr = dispatcher.get();
+        m_Dispatchers.pop_back();
+        m_Dispatchers.insert(m_Dispatchers.begin(), std::move(dispatcher));
+        return rawptr;
     }
     
     void
@@ -106,6 +111,7 @@ namespace dispatch
       Request each of the dispatchers to stop
     --*/
     {
+        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
         for (auto& dispatcher : m_Dispatchers)
         {
             dispatcher->Stop();
