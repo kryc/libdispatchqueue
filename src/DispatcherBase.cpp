@@ -230,6 +230,12 @@ namespace dispatch
     {
         assert(std::this_thread::get_id() != m_ThreadId);
         
+        //
+        // In order to reply, we must already be
+        // on a functioning dispatcher
+        //
+        assert(ThreadQueue != nullptr);
+        
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);
         this->DispatcherBase::PostTask(std::move(job));
