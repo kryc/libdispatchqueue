@@ -30,6 +30,7 @@ namespace dispatch
     void PostTaskToDispatcher(const std::string& Name, const Callable& Job);
     void PostTaskAndReply(DispatcherBasePtr Dispatcher, const Callable& Job, const Callable& Reply);
     void PostTaskAndReply(const std::string& Name, const Callable& Job, const Callable& Reply);
+    void PostTask(DispatcherBase* Dispatcher, const Callable& Job);
     void PostTask(const Callable& Job);
 
     bool OnDispatcher(const std::string& Name);

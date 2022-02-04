@@ -229,6 +229,15 @@ namespace dispatch
 
     void
     PostTask(
+        DispatcherBase* Dispatcher,
+        const Callable& Job
+    )
+    {
+        PostTaskToDispatcher(Dispatcher, Job);
+    }
+
+    void
+    PostTask(
         const Callable& Job
     )
     /*++
@@ -236,7 +245,7 @@ namespace dispatch
       --*/
     {
         auto dispatcher = CurrentDispatcher();
-        PostTaskToDispatcher(dispatcher, Job);
+        PostTask(dispatcher, Job);
     }
 
     bool
