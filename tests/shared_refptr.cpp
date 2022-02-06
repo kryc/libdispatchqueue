@@ -9,7 +9,7 @@ DoStuff(
     dispatch::SharedRefPtr<std::string> Ptr
 )
 {
-    std::cout << *Ptr.get() << std::endl;
+    std::cout << Ptr->c_str() << std::endl << *Ptr << std::endl;
     dispatch::End();
 }
 

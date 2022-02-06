@@ -73,13 +73,19 @@ namespace dispatch
         }
 
         inline T*
-        get(void)
+        operator->(void) const
+        {
+            return get();
+        }
+
+        inline T*
+        get(void) const
         {
             return m_Manager->get();
         }
 
-        inline T
-        operator*(void)
+        inline T&
+        operator*(void) const
         {
             return *m_Manager->get();
         }
