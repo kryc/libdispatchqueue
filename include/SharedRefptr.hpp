@@ -11,19 +11,24 @@ namespace dispatch
     class _ObjectManager
     {
     protected:
-        _ObjectManager(T* Allocation) : m_Allocation(Allocation) {};
+        _ObjectManager(T * const Allocation) :
+            m_Allocation(Allocation)
+        {
+
+        };
+
         ~_ObjectManager(void)
         {
             assert(m_Refs == 0);
             delete m_Allocation;
         }
-        inline T* get(void) const { return m_Allocation; };
+        inline T* const get(void) const { return m_Allocation; };
         inline void ref(void) { ++m_Refs; };
         inline const size_t deref(void) { return --m_Refs; };
         inline const size_t refs(void) const { return m_Refs; };
         friend class SharedRefPtr<T>;
     private:
-        T* m_Allocation = nullptr;
+        T* const m_Allocation = nullptr;
         size_t m_Refs = 0;
     };
 
@@ -31,18 +36,19 @@ namespace dispatch
     class SharedRefPtr
     {
     public:
-        template <class... Args>
-        SharedRefPtr(Args&&... x){
-            auto allocation = new T(std::forward<Args>(x)...);
-            m_Manager = new _ObjectManager(std::move(allocation));
+
+        SharedRefPtr(
+            T* const Allocation
+        )
+        {
+            m_Manager = new _ObjectManager(std::move(Allocation));
             m_Manager->ref();
         }
 
         SharedRefPtr(
-            SharedRefPtr& Rhs
+            const SharedRefPtr& Rhs
         )
         {
-            std::cout << "Incrementing" << std::endl;
             m_Manager = Rhs.m_Manager;
             m_Manager->ref();
         }
@@ -52,14 +58,15 @@ namespace dispatch
         )
         {
             m_Manager = Rhs.m_Manager;
-            m_Manager = nullptr;
+            Rhs.m_Manager = nullptr;
         }
 
         ~SharedRefPtr(
             void
         )
         {
-            if (m_Manager->deref() == 0)
+            if (m_Manager != nullptr &&
+                m_Manager->deref() == 0)
             {
                 delete m_Manager;
             }
@@ -81,4 +88,14 @@ namespace dispatch
         _ObjectManager<T>* m_Manager = nullptr;
     };
 
+
+    template <typename T, class... Args>
+    dispatch::SharedRefPtr<T>
+    MakeSharedRefPtr(
+        Args&&... x
+    )
+    {
+        T* allocation = new T(std::forward<Args>(x)...);
+        return SharedRefPtr<T>(allocation);
+    }
 }

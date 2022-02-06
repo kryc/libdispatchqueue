@@ -32,12 +32,16 @@ target_include_directories(dispatchqueue
                         )
 
 # add the test
-file(GLOB TESTSOURCES "./tests/*.cpp")
-add_executable(test EXCLUDE_FROM_ALL ${TESTSOURCES})
-target_link_libraries(test dispatchqueue)
-target_include_directories(test
-                            PUBLIC
-                                ./include/
-                        )
+add_custom_target(tests)
+file(GLOB TESTS "tests/*.cpp")
+foreach(TEST ${TESTS})
+    get_filename_component(TESTNAME ${TEST} NAME_WE)
+    add_executable(${TESTNAME} EXCLUDE_FROM_ALL ${TEST} ${SOURCES})
+    target_include_directories(${TESTNAME}
+                                PUBLIC
+                                    ./include/)
+    target_link_libraries(${TESTNAME} dispatchqueue)
+    add_dependencies(tests ${TESTNAME})
+endforeach()
 
 configure_file(Config.h.in Config.h)

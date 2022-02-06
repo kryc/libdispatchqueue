@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "DispatchQueue.hpp"
 #include "SharedRefptr.hpp"
 
 void
@@ -9,12 +10,38 @@ DoStuff(
 )
 {
     std::cout << *Ptr.get() << std::endl;
+    dispatch::End();
+}
+
+void
+MainLoop()
+{
+    auto ptr = dispatch::MakeSharedRefPtr<std::string>("Hello");
+    dispatch::PostTaskAndReply(
+        "second",
+        dispatch::bind(
+            &DoStuff,
+            ptr
+        ),
+        dispatch::bind(
+            &DoStuff,
+            ptr
+        )
+    );
 }
 
 int main()
 {
-    dispatch::SharedRefPtr<std::string> ptr("Hello");
-    auto b = ptr;
-    DoStuff(b);
-    std::cout << *ptr << std::endl;
+    
+
+    //
+    // Create the dispatchers
+    //
+    auto d = dispatch::CreateDispatcher("second");
+    auto d2 = dispatch::CreateAndEnterDispatcher(
+        "main",
+        dispatch::bind(
+            &MainLoop
+        )
+    );
 }
