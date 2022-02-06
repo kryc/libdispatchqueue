@@ -53,13 +53,13 @@ namespace dispatch
             m_Manager->ref();
         }
 
-        SharedRefPtr(
-            SharedRefPtr&& Rhs
-        )
-        {
-            m_Manager = Rhs.m_Manager;
-            Rhs.m_Manager = nullptr;
-        }
+        // SharedRefPtr(
+        //     SharedRefPtr&& Rhs
+        // )
+        // {
+        //     m_Manager = Rhs.m_Manager;
+        //     Rhs.m_Manager = nullptr;
+        // }
 
         ~SharedRefPtr(
             void
