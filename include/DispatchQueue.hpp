@@ -32,6 +32,8 @@ namespace dispatch
     void PostTaskAndReply(const std::string& Name, const Callable& Job, const Callable& Reply);
     void PostTask(DispatcherBase* Dispatcher, const Callable& Job);
     void PostTask(const Callable& Job);
+    void PostTaskStrict(const Callable& Job);
+    void PostTaskFast(const Callable& Job);
 
     bool OnDispatcher(const std::string& Name);
     void KeepAlive(const bool KeepAlive);

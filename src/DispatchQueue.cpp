@@ -241,11 +241,37 @@ namespace dispatch
         const Callable& Job
     )
     /*++
-      Post a task to the current task queue
+      Post a task to the current dispatcher
       --*/
     {
         auto dispatcher = CurrentDispatcher();
         PostTask(dispatcher, Job);
+    }
+
+    void
+    PostTaskStrict(
+        const Callable& Job
+    )
+    /*++
+      Post a task to the current queue strictly
+      disregarding the dispatcher
+      This will bypass any pool logic
+    --*/
+    {
+        auto dispatcher = CurrentQueue();
+        PostTask(dispatcher, Job);
+    }
+
+    void
+    PostTaskFast(
+        const Callable& Job
+    )
+    /*++
+      The fastest way to post a task is to the
+      current queue as it bypasses any locking
+    --*/
+    {
+        PostTaskStrict(Job);
     }
 
     bool
