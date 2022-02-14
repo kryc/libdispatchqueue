@@ -61,6 +61,30 @@ namespace dispatch
         //     Rhs.m_Manager = nullptr;
         // }
 
+        SharedRefPtr&
+        operator=(
+            const SharedRefPtr&& Other
+        )
+        /*++
+          Move assignment
+        --*/
+        {
+            m_Manager = Other.m_Manager;
+            Other.m_Manager = nullptr;
+        }
+
+        SharedRefPtr&
+        operator=(
+            const SharedRefPtr& Other
+        )
+        /*++
+          Copy assignment
+        --*/
+        {
+            m_Manager = Other.m_Manager;
+            m_Manager->ref();
+        }
+
         ~SharedRefPtr(
             void
         )
