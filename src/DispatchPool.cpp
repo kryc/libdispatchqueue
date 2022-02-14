@@ -8,6 +8,8 @@
 namespace dispatch
 {
 
+    DispatcherBase* CurrentQueue(void);
+
     DispatchPool::DispatchPool(const std::string& Name, const size_t Size)
     :DispatcherBase::DispatcherBase(Name)
     {
@@ -65,13 +67,19 @@ namespace dispatch
         }
 
         //
-        // Fallback to the last dispatcher
+        // Try the current dispatcher if we are on one
         //
-        auto dispatcher = std::move(m_Dispatchers.back());
-        auto rawptr = dispatcher.get();
-        m_Dispatchers.pop_back();
-        m_Dispatchers.insert(m_Dispatchers.begin(), std::move(dispatcher));
-        return rawptr;
+        auto current = dispatch::CurrentQueue();
+        if (current != nullptr)
+        {
+            return current;
+        }
+
+        //
+        // Fallback to the first dispatcher
+        //
+        auto dispatcher = std::move(m_Dispatchers.front().get());
+        return dispatcher;
     }
     
     void
