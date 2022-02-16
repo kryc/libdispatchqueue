@@ -228,7 +228,14 @@ namespace dispatch
         const TaskPriority Priority
     )
     {
-        assert(std::this_thread::get_id() != m_ThreadId);
+#ifdef DEBUG
+        static bool warned = false;
+        if(std::this_thread::get_id() != m_ThreadId && !warned)
+        {
+            std::cerr << "[!] WARNING: PostTaskAndReply called on same thread." << std::endl;
+            warned = true;
+        }
+#endif
         
         //
         // In order to reply, we must already be
