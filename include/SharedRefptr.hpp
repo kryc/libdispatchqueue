@@ -38,6 +38,13 @@ namespace dispatch
     public:
 
         SharedRefPtr(
+            void
+        )
+        {
+            m_Manager = nullptr;
+        }
+
+        SharedRefPtr(
             T* const Allocation
         )
         {
@@ -63,7 +70,7 @@ namespace dispatch
 
         SharedRefPtr&
         operator=(
-            const SharedRefPtr&& Other
+            SharedRefPtr&& Other
         )
         /*++
           Move assignment
@@ -71,6 +78,7 @@ namespace dispatch
         {
             m_Manager = Other.m_Manager;
             Other.m_Manager = nullptr;
+            return *this;
         }
 
         SharedRefPtr&
@@ -83,6 +91,23 @@ namespace dispatch
         {
             m_Manager = Other.m_Manager;
             m_Manager->ref();
+            return *this;
+        }
+
+        bool
+        operator==(
+            const SharedRefPtr& Other
+        )
+        {
+            return (m_Manager == nullptr && Other.m_Manager == nullptr) || (m_Manager->m_Allocation == Other.m_Manager->m_Allocation);
+        }
+
+        bool
+        operator==(
+            const void* Ptr
+        )
+        {
+            return (m_Manager == nullptr) || (m_Manager->m_Allocation == Ptr);
         }
 
         ~SharedRefPtr(
