@@ -97,7 +97,7 @@ namespace dispatch
         bool
         operator==(
             const SharedRefPtr& Other
-        )
+        ) const
         {
             return (m_Manager == nullptr && Other.m_Manager == nullptr) || (m_Manager->m_Allocation == Other.m_Manager->m_Allocation);
         }
@@ -105,7 +105,7 @@ namespace dispatch
         bool
         operator==(
             const void* Ptr
-        )
+        ) const
         {
             return (m_Manager == nullptr) || (m_Manager->m_Allocation == Ptr);
         }
@@ -122,19 +122,25 @@ namespace dispatch
         }
 
         inline T*
-        operator->(void) const
-        {
-            return get();
-        }
-
-        inline T*
-        get(void) const
+        get(
+            void
+        ) const
         {
             return m_Manager->get();
         }
 
+        inline T*
+        operator->(
+            void
+        ) const
+        {
+            return get();
+        }
+
         inline T&
-        operator*(void) const
+        operator*(
+            void
+        ) const
         {
             return *m_Manager->get();
         }
