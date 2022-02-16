@@ -110,6 +110,30 @@ namespace dispatch
             return (m_Manager == nullptr) || (m_Manager->m_Allocation == Ptr);
         }
 
+        bool
+        operator!=(
+            const SharedRefPtr& Other
+        ) const
+        {
+            return !(this->operator==(Other));
+        }
+
+        bool
+        operator!=(
+            const void* Ptr
+        ) const
+        {
+            return !(this->operator==(Ptr));
+        }
+
+        bool
+        operator!(
+            void
+        ) const
+        {
+            return m_Manager == nullptr || m_Manager->m_Allocation == nullptr;
+        }
+
         ~SharedRefPtr(
             void
         )
