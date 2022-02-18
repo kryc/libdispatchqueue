@@ -4,35 +4,44 @@
 
 namespace dispatch
 {
-    template <typename T>
+    template <typename T, bool Bound=false>
     class SharedRefPtr;
 
-    template <typename T>
+    class DisaptcherBase;
+    extern thread_local DispatcherBase* ThreadQueue;
+
+    template <typename T, bool Bound>
     class _ObjectManager
     {
     protected:
         _ObjectManager(T * const Allocation) :
-            m_Allocation(Allocation)
+            m_Allocation(Allocation),
+            m_BoundDispatcher((void*)ThreadQueue)
         {
-
+            if(Bound)
+            {
+                assert(ThreadQueue != nullptr);
+            }
         };
 
         ~_ObjectManager(void)
         {
+            assert(!Bound || m_BoundDispatcher == ThreadQueue);
             assert(m_Refs == 0);
             delete m_Allocation;
         }
-        inline T* const get(void) const { return m_Allocation; };
-        inline void ref(void) { ++m_Refs; };
-        inline const size_t deref(void) { return --m_Refs; };
-        inline const size_t refs(void) const { return m_Refs; };
-        friend class SharedRefPtr<T>;
+        inline T* const get(void) const { assert(!Bound || m_BoundDispatcher == ThreadQueue); return m_Allocation; };
+        inline void ref(void) { assert(!Bound || m_BoundDispatcher == ThreadQueue); ++m_Refs; };
+        inline const size_t deref(void) { assert(!Bound || m_BoundDispatcher == ThreadQueue); return --m_Refs; };
+        inline const size_t refs(void) const { assert(!Bound || m_BoundDispatcher == ThreadQueue); return m_Refs; };
+        friend class SharedRefPtr<T,Bound>;
     private:
         T* const m_Allocation = nullptr;
         size_t m_Refs = 0;
+        void* m_BoundDispatcher = nullptr;
     };
 
-    template <typename T>
+    template <typename T, bool Bound>
     class SharedRefPtr
     {
     public:
@@ -48,7 +57,7 @@ namespace dispatch
             T* const Allocation
         )
         {
-            m_Manager = new _ObjectManager(std::move(Allocation));
+            m_Manager = new _ObjectManager<T,Bound>(std::move(Allocation));
             m_Manager->ref();
         }
 
@@ -170,7 +179,7 @@ namespace dispatch
         }
 
     protected:
-        _ObjectManager<T>* m_Manager = nullptr;
+        _ObjectManager<T,Bound>* m_Manager = nullptr;
     };
 
 
@@ -182,5 +191,18 @@ namespace dispatch
     {
         T* allocation = new T(std::forward<Args>(x)...);
         return SharedRefPtr<T>(allocation);
+    }
+
+    template <typename T>
+    using BoundRefPtr = dispatch::SharedRefPtr<T,true>;
+
+    template <typename T, class... Args>
+    dispatch::BoundRefPtr<T>
+    MakeBoundRefPtr(
+        Args&&... x
+    )
+    {
+        T* allocation = new T(std::forward<Args>(x)...);
+        return BoundRefPtr<T>(allocation);
     }
 }
