@@ -10,7 +10,29 @@ DoStuff(
 )
 {
     std::cout << Ptr->c_str() << std::endl << *Ptr << std::endl;
+}
+
+void
+DoEnd(
+    void
+)
+{
     dispatch::End();
+}
+
+void
+DoBound(
+    dispatch::BoundRefPtr<std::string> Ptr
+)
+{
+    std::cout << Ptr->c_str() << std::endl << *Ptr << std::endl;
+    dispatch::PostTaskToDispatcher(
+        "second",
+        dispatch::bind(
+            &DoBound,
+            Ptr
+        )
+    );
 }
 
 void
@@ -24,16 +46,25 @@ MainLoop()
             ptr
         ),
         dispatch::bind(
-            &DoStuff,
-            ptr
+            &DoEnd
+        )
+    );
+}
+
+void
+BoundLoop()
+{
+    auto bptr = dispatch::MakeBoundRefPtr<std::string>("Bound");
+    dispatch::PostTask(
+        dispatch::bind(
+            &DoBound,
+            bptr
         )
     );
 }
 
 int main()
 {
-    
-
     //
     // Create the dispatchers
     //
@@ -42,6 +73,13 @@ int main()
         "main",
         dispatch::bind(
             &MainLoop
+        )
+    );
+
+    auto d3 = dispatch::CreateAndEnterDispatcher(
+        "third",
+        dispatch::bind(
+            &BoundLoop
         )
     );
 }
