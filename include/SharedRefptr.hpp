@@ -7,7 +7,7 @@ namespace dispatch
     template <typename T, bool Bound=false>
     class SharedRefPtr;
 
-    class DisaptcherBase;
+    class DispatcherBase;
     extern thread_local DispatcherBase* ThreadQueue;
 
     template <typename T, bool Bound>
