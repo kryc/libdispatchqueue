@@ -302,10 +302,10 @@ namespace dispatch
     void
     DispatcherBase::PostDelayedTask(
         const Callable& Task,
-        const std::chrono::microseconds When
+        const std::chrono::microseconds Delay
     )
     {
-        auto triggerTime = std::chrono::system_clock::now() + When;
+        auto triggerTime = std::chrono::system_clock::now() + Delay;
         auto job = Job(std::move(Task), this, triggerTime);
         assert(job.IsDelayed());
         PostTaskInternal(std::move(job));

@@ -207,6 +207,16 @@ namespace dispatch
     }
 
     void
+    PostDelayedTaskToDispatcher(
+        DispatcherBase* Dispatcher,
+        const Callable& Job,
+        const std::chrono::microseconds Delay
+    )
+    {
+        Dispatcher->PostDelayedTask(std::move(Job), Delay);
+    }
+
+    void
     PostTaskAndReply(
         DispatcherBasePtr Dispatcher,
         const Callable& Job,
@@ -234,6 +244,16 @@ namespace dispatch
     )
     {
         PostTaskToDispatcher(Dispatcher, Job);
+    }
+
+    void
+    PostDelayedTask(
+        DispatcherBase* Dispatcher,
+        const Callable& Job,
+        const std::chrono::microseconds Delay
+    )
+    {
+        PostDelayedTaskToDispatcher(Dispatcher, Job, Delay);
     }
 
     void
@@ -272,6 +292,16 @@ namespace dispatch
     --*/
     {
         PostTaskStrict(Job);
+    }
+
+    void
+    PostDelayedTask(
+        const Callable& Job,
+        const std::chrono::microseconds Delay
+    )
+    {
+        auto dispatcher = CurrentDispatcher();
+        PostDelayedTask(dispatcher, Job, Delay);
     }
 
     bool

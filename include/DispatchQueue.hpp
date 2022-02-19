@@ -28,12 +28,15 @@ namespace dispatch
     void RemoveDispatcher(DispatcherBase* Dispatcher);
     void PostTaskToDispatcher(DispatcherBasePtr Dispatcher, const Callable& Job);
     void PostTaskToDispatcher(const std::string& Name, const Callable& Job);
+    void PostDelayedTaskToDispatcher(DispatcherBasePtr Dispatcher, const Callable& Job, const std::chrono::microseconds Delay);
     void PostTaskAndReply(DispatcherBasePtr Dispatcher, const Callable& Job, const Callable& Reply);
     void PostTaskAndReply(const std::string& Name, const Callable& Job, const Callable& Reply);
     void PostTask(DispatcherBase* Dispatcher, const Callable& Job);
+    void PostDelayedTask(DispatcherBase* Dispatcher, const Callable& Job, const std::chrono::microseconds Delay);
     void PostTask(const Callable& Job);
     void PostTaskStrict(const Callable& Job);
     void PostTaskFast(const Callable& Job);
+    void PostDelayedTask(const Callable& Job, const std::chrono::microseconds Delay);
 
     bool OnDispatcher(const std::string& Name);
     void KeepAlive(const bool KeepAlive);

@@ -27,7 +27,7 @@ namespace dispatch{
         virtual void Run(void);
         void Enter(void);
         virtual void PostTask(const Callable& Task, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) = 0;
-        void PostDelayedTask(const Callable& Task, const std::chrono::microseconds When);
+        void PostDelayedTask(const Callable& Task, const std::chrono::microseconds Delay);
         virtual void PostTaskAndReply(const Callable& Task, const Callable& Reply, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) = 0;
         virtual bool Wait(void);
         virtual void Stop(void);
