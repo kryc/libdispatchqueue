@@ -49,13 +49,9 @@ namespace dispatch
         // m_Queue can only be posted to by the current
         // thread (which is waiting...)
         //
-        if (m_DelayedTasks == 0)
+        if (m_DelayedQueue.size() == 0)
         {
-            if (m_Queue.size() > 0)
-            {
-                return;
-            }
-            // assert(m_Queue.size() == 0);
+            assert(m_Queue.size() == 0);
             m_TaskAvailable.wait(lk, [this]{
                 return m_CrossThread.size() > 0;}
             );
@@ -81,10 +77,6 @@ namespace dispatch
         Job ToRun
     )
     {
-        if (ToRun.IsDelayed())
-        {
-            m_DelayedTasks--;
-        }
         assert(ToRun.ShouldRunNow());
         ToRun();
         if (ToRun.HasReply())
@@ -119,7 +111,18 @@ namespace dispatch
                 m_CrossThread.clear();
             }
 
-            if (m_Queue.size() == 0 || m_Queue.size() == m_DelayedTasks)
+            //
+            // Check if we have a delayed task to run
+            // If so, add it to the start of the queue
+            //
+            if (m_DelayedQueue.size() > 0 && m_DelayedQueue.front().ShouldRunNow())
+            {
+                auto job = std::move(m_DelayedQueue.front());
+                m_DelayedQueue.pop_front();
+                m_Queue.push_front(std::move(job));
+            }
+
+            if (m_Queue.size() == 0)
             {
                 //
                 // Check if we kill this dispatcher
@@ -138,25 +141,6 @@ namespace dispatch
                 {
                     NotifyCompletion();
                 }
-
-                //
-                // We need to find the next delayed task
-                //
-                if (m_DelayedTasks != 0)
-                {
-                    m_NextDelayedTask = dispatch::MAXTIME;
-                    for (auto & job : m_Queue)
-                    {
-                        if (job.IsDelayed())
-                        {
-                            auto time = job.GetDispatchTime();
-                            if (time < m_NextDelayedTask)
-                            {
-                                m_NextDelayedTask = time;
-                            }
-                        }
-                    }
-                }
                 
                 //
                 // Push the keep alive task onto the queue
@@ -171,25 +155,8 @@ namespace dispatch
             auto job = std::move(m_Queue.front());
             m_Queue.pop_front();
 
-            if (job.ShouldRunNow())
-            {
-                DispatchJob(std::move(job));
-            }
-            else if (job.IsDelayed())
-            {
-                //
-                // Delayed task but not to run now
-                // Push it back onto the queue
-                //
-                m_DelayedTasks--;
-                this->PostTaskInternal(
-                    std::move(job)
-                );
-            }
-            else
-            {
-                assert(false);
-            }
+            assert (job.ShouldRunNow());
+            DispatchJob(std::move(job));
         }
 
         //
@@ -279,14 +246,17 @@ namespace dispatch
         {
             if (TaskJob.IsDelayed())
             {
-                auto time = TaskJob.GetDispatchTime();
-                m_DelayedTasks++;
-                if (time < m_NextDelayedTask)
-                {
-                    m_NextDelayedTask = time;
-                }
+                m_DelayedQueue.push_back(std::move(TaskJob));
+                std::sort(m_DelayedQueue.begin(), m_DelayedQueue.end(), [](Job& a, Job& b){
+                    return a.GetDispatchTime() < b.GetDispatchTime();
+                });
+                m_NextDelayedTask = m_DelayedQueue.begin()->GetDispatchTime();
             }
-            m_Queue.push_back(std::move(TaskJob));
+            else
+            {
+                m_Queue.push_back(std::move(TaskJob));
+                std::sort(m_Queue.begin(), m_Queue.end());
+            }
             m_ReceivedTask = true;
         }
         else
@@ -307,7 +277,6 @@ namespace dispatch
     {
         auto triggerTime = std::chrono::system_clock::now() + Delay;
         auto job = Job(std::move(Task), this, triggerTime);
-        assert(job.IsDelayed());
         PostTaskInternal(std::move(job));
     }
 

@@ -43,6 +43,7 @@ namespace dispatch{
         void NotifyCompletion(void) { if (m_CompletionHandler) m_CompletionHandler(this); };
         void NotifyDestruction(void) { if (m_DestructionHandler) m_DestructionHandler(this); };
         std::deque<Job> m_Queue;
+        std::deque<Job> m_DelayedQueue;
         std::mutex m_CrossThreadMutex;
         std::deque<Job> m_CrossThread;
         std::condition_variable m_TaskAvailable;
@@ -56,7 +57,6 @@ namespace dispatch{
         size_t m_TasksCompleted = 0;
         size_t m_Keepalives = 0;
         std::atomic<bool> m_Waiting;
-        size_t m_DelayedTasks = 0;
         dispatch::timepoint m_NextDelayedTask = dispatch::MAXTIME;
     private:
         void StopTask(void);
