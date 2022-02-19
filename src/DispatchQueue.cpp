@@ -307,7 +307,7 @@ namespace dispatch
       End the current dispatcher
     --*/
     {
-        auto dispatcher = ThreadQueue;
+        auto dispatcher = CurrentQueue();
         dispatcher->Stop();
     }
 

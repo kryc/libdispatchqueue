@@ -19,6 +19,8 @@ namespace dispatch
     extern thread_local DispatcherBase* ThreadQueue;
     extern thread_local DispatcherBase* ThreadDispatcher;
 
+    const dispatch::timepoint MAXTIME = std::chrono::system_clock::now() + std::chrono::hours(24*365);
+
     bool
     DispatcherBase::Wait(
         void
@@ -47,9 +49,23 @@ namespace dispatch
         // m_Queue can only be posted to by the current
         // thread (which is waiting...)
         //
-        m_TaskAvailable.wait(lk, [this]{
-            return m_CrossThread.size() > 0;}
-        );
+        if (m_DelayedTasks == 0)
+        {
+            if (m_Queue.size() > 0)
+            {
+                return;
+            }
+            // assert(m_Queue.size() == 0);
+            m_TaskAvailable.wait(lk, [this]{
+                return m_CrossThread.size() > 0;}
+            );
+        }
+        else
+        {
+            m_TaskAvailable.wait_until(lk, m_NextDelayedTask, [this]{
+                return m_CrossThread.size() > 0;}
+            );
+        }
     }
 
     void
@@ -58,6 +74,26 @@ namespace dispatch
     )
     {
         m_ThreadDispatcher = Dispatcher;
+    }
+
+    void
+    DispatcherBase::DispatchJob(
+        Job ToRun
+    )
+    {
+        if (ToRun.IsDelayed())
+        {
+            m_DelayedTasks--;
+        }
+        assert(ToRun.ShouldRunNow());
+        ToRun();
+        if (ToRun.HasReply())
+        {
+            auto reply = std::move(*ToRun.GetReply());
+            auto dispatcher = (DispatcherBase*)reply.GetDispatcher();
+            dispatcher->PostTaskInternal(std::move(reply));
+        }
+        m_TasksCompleted++;
     }
 
     void
@@ -78,12 +114,12 @@ namespace dispatch
                 std::lock_guard<std::mutex> guard(m_CrossThreadMutex);
                 for (auto& callable : m_CrossThread)
                 {
-                    PostTask(std::move(callable));
+                    PostTaskInternal(std::move(callable));
                 }
                 m_CrossThread.clear();
             }
 
-            if (m_Queue.size() == 0)
+            if (m_Queue.size() == 0 || m_Queue.size() == m_DelayedTasks)
             {
                 //
                 // Check if we kill this dispatcher
@@ -95,29 +131,72 @@ namespace dispatch
                 }
 
                 //
-                // Notify the completion handler
+                // Notify the completion handler only
+                // if we have no delayed tasks
                 //
-                NotifyCompletion();
+                if (m_Queue.size() == 0)
+                {
+                    NotifyCompletion();
+                }
+
+                //
+                // We need to find the next delayed task
+                //
+                if (m_DelayedTasks != 0)
+                {
+                    m_NextDelayedTask = dispatch::MAXTIME;
+                    for (auto & job : m_Queue)
+                    {
+                        if (job.IsDelayed())
+                        {
+                            auto time = job.GetDispatchTime();
+                            if (time < m_NextDelayedTask)
+                            {
+                                m_NextDelayedTask = time;
+                            }
+                        }
+                    }
+                }
                 
                 //
                 // Push the keep alive task onto the queue
                 //
-                this->PostTask(
-                    dispatch::bind(&DispatcherBase::KeepAliveInternal, this)
+                auto job = Job(dispatch::bind(&DispatcherBase::KeepAliveInternal, this), TaskPriority::PRIORITY_NORMAL, this);
+                this->PostTaskInternal(
+                    std::move(job)
                 );
                 m_Keepalives++;
             }
+
             auto job = std::move(m_Queue.front());
             m_Queue.pop_front();
-            job();
-            if (job.HasReply())
+
+            if (job.ShouldRunNow())
             {
-                auto reply = std::move(*job.GetReply());
-                auto dispatcher = (DispatcherBase*)reply.GetDispatcher();
-                dispatcher->PostTask(std::move(reply));
+                DispatchJob(std::move(job));
             }
-            m_TasksCompleted++;
+            else if (job.IsDelayed())
+            {
+                //
+                // Delayed task but not to run now
+                // Push it back onto the queue
+                //
+                m_DelayedTasks--;
+                this->PostTaskInternal(
+                    std::move(job)
+                );
+            }
+            else
+            {
+                assert(false);
+            }
         }
+
+        //
+        // We are no longer the dispatcher for this thread
+        //
+        ThreadQueue = nullptr;
+        ThreadDispatcher = nullptr;
 
         //
         // This will be the last thing that the
@@ -192,12 +271,21 @@ namespace dispatch
     }
 
     void
-    DispatcherBase::PostTask(
+    DispatcherBase::PostTaskInternal(
         Job TaskJob
     )
     {
         if (std::this_thread::get_id() == m_ThreadId)
         {
+            if (TaskJob.IsDelayed())
+            {
+                auto time = TaskJob.GetDispatchTime();
+                m_DelayedTasks++;
+                if (time < m_NextDelayedTask)
+                {
+                    m_NextDelayedTask = time;
+                }
+            }
             m_Queue.push_back(std::move(TaskJob));
             m_ReceivedTask = true;
         }
@@ -212,13 +300,25 @@ namespace dispatch
     }
 
     void
+    DispatcherBase::PostDelayedTask(
+        const Callable& Task,
+        const std::chrono::microseconds When
+    )
+    {
+        auto triggerTime = std::chrono::system_clock::now() + When;
+        auto job = Job(std::move(Task), this, triggerTime);
+        assert(job.IsDelayed());
+        PostTaskInternal(std::move(job));
+    }
+
+    void
     Dispatcher::PostTask(
         const Callable& Task,
         const TaskPriority Priority
     )
     {
         auto job = Job(std::move(Task), Priority, this);
-        this->DispatcherBase::PostTask(std::move(job));
+        this->DispatcherBase::PostTaskInternal(std::move(job));
     }
 
     void
@@ -245,7 +345,7 @@ namespace dispatch
         
         auto reply = Job(std::move(Reply), Priority, ThreadQueue);
         auto job = Job(std::move(Task), Priority, this, reply);
-        this->DispatcherBase::PostTask(std::move(job));
+        this->DispatcherBase::PostTaskInternal(std::move(job));
     }
 
 }

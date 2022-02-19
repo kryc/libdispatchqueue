@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -15,6 +16,8 @@ namespace dispatch{
     using DestructionHandler = std::function<void(DispatcherBase*)>;
     using CompletionHandler = std::function<void(DispatcherBase*)>;
 
+    extern const dispatch::timepoint MAXTIME;
+
     class DispatcherBase
     {
     public:
@@ -24,6 +27,7 @@ namespace dispatch{
         virtual void Run(void);
         void Enter(void);
         virtual void PostTask(const Callable& Task, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) = 0;
+        void PostDelayedTask(const Callable& Task, const std::chrono::microseconds When);
         virtual void PostTaskAndReply(const Callable& Task, const Callable& Reply, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) = 0;
         virtual bool Wait(void);
         virtual void Stop(void);
@@ -35,7 +39,7 @@ namespace dispatch{
         void SetCompletionHandler(CompletionHandler Handler) { m_CompletionHandler = Handler; };
         void SetThreadDispatcher(DispatcherBase* Dispatcher);
     protected:
-        void PostTask(Job TaskJob);
+        void PostTaskInternal(Job TaskJob);
         void NotifyCompletion(void) { if (m_CompletionHandler) m_CompletionHandler(this); };
         void NotifyDestruction(void) { if (m_DestructionHandler) m_DestructionHandler(this); };
         std::deque<Job> m_Queue;
@@ -52,10 +56,13 @@ namespace dispatch{
         size_t m_TasksCompleted = 0;
         size_t m_Keepalives = 0;
         std::atomic<bool> m_Waiting;
+        size_t m_DelayedTasks = 0;
+        dispatch::timepoint m_NextDelayedTask = dispatch::MAXTIME;
     private:
         void StopTask(void);
         void KeepAliveInternal(void);
         void DispatchLoop(void);
+        void DispatchJob(Job ToRun);
 
         CompletionHandler m_CompletionHandler;
         DestructionHandler m_DestructionHandler;
