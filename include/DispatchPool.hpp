@@ -22,14 +22,12 @@ namespace dispatch
         void Stop(void) override;
         bool Wait(void) override;
     protected:
-        void OnDispatcherCompleted(DispatcherBase* Dispatcher);
         void OnDispatcherTerminated(DispatcherBase* Dispatacher);
     private:
         DispatcherBase* Next(void);
         std::vector<DispatcherUPtr> m_Dispatchers;
-        std::mutex m_FreeListMutex;
-        std::vector<DispatcherBase*> m_FreeList;
         std::atomic<size_t> m_Active;
+        std::atomic<size_t> m_Dispatched;
     };
 
     using DispatchPoolPtr = std::shared_ptr<DispatchPool>;

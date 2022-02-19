@@ -40,7 +40,6 @@ namespace dispatch
                 std::bind(&DispatchPool::OnDispatcherTerminated, this, std::placeholders::_1)
             );
             dispatcher->Run();
-            m_FreeList.push_back(dispatcher.get());
             m_Dispatchers.push_back(std::move(dispatcher));
         }
     }
@@ -53,33 +52,9 @@ namespace dispatch
       Returns the next dispatcher to push tasks to.
       Base implementation is a simple round-robin
     --*/
-    {
-        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
-        
-        //
-        // Try and use the free list where possible
-        //
-        if (!m_FreeList.empty())
-        {
-            auto dispatcher = m_FreeList.back();
-            m_FreeList.pop_back();
-            return dispatcher;
-        }
-
-        //
-        // Try the current dispatcher if we are on one
-        //
-        auto current = dispatch::CurrentQueue();
-        if (current != nullptr)
-        {
-            return current;
-        }
-
-        //
-        // Fallback to the first dispatcher
-        //
-        auto dispatcher = std::move(m_Dispatchers.front().get());
-        return dispatcher;
+    {   
+        auto index = (m_Dispatched++) % m_Dispatchers.size();
+        return m_Dispatchers[index].get();
     }
     
     void
@@ -119,7 +94,6 @@ namespace dispatch
       Request each of the dispatchers to stop
     --*/
     {
-        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
         for (auto& dispatcher : m_Dispatchers)
         {
             dispatcher->Stop();
@@ -140,15 +114,6 @@ namespace dispatch
             dispatcher->Wait();
         }
         return true;
-    }
-
-    void
-    DispatchPool::OnDispatcherCompleted(
-        DispatcherBase* Dispatcher
-    )
-    {
-        std::lock_guard<std::mutex> mutex(m_FreeListMutex);
-        m_FreeList.push_back(Dispatcher);
     }
 
     void
