@@ -42,6 +42,7 @@ namespace dispatch{
         void PostTaskInternal(Job TaskJob);
         void NotifyCompletion(void) { if (m_CompletionHandler) m_CompletionHandler(this); };
         void NotifyDestruction(void) { if (m_DestructionHandler) m_DestructionHandler(this); };
+        bool OnNativeThread(void) { return m_ThreadId == std::this_thread::get_id(); };
         std::deque<Job> m_Queue;
         std::deque<Job> m_DelayedQueue;
         std::mutex m_CrossThreadMutex;

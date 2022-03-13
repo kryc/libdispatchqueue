@@ -205,4 +205,21 @@ namespace dispatch
         T* allocation = new T(std::forward<Args>(x)...);
         return BoundRefPtr<T>(allocation);
     }
+
+#ifdef STDPTR
+#define MakeShared std::make_shared
+#define SharedPtr std::shared_ptr
+#define MakeBound std::make_shared
+#define BoundPtr std::shared_ptr
+#define MakeUnique std::make_unique
+#define UniquePtr std::unique_ptr
+#else
+#define MakeShared dispatch::MakeSharedRefPtr
+#define SharedPtr dispatch::SharedRefPtr
+#define MakeBound dispatch::MakeBoundRefPtr
+#define BoundPtr dispatch::BoundRefPtr
+#define MakeUnique std::make_unique
+#define UniquePtr std::unique_ptr
+#endif
+
 }

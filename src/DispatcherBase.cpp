@@ -49,6 +49,7 @@ namespace dispatch
         // m_Queue can only be posted to by the current
         // thread (which is waiting...)
         //
+        assert(OnNativeThread());
         if (m_DelayedQueue.size() == 0)
         {
             assert(m_Queue.size() == 0);
@@ -78,6 +79,7 @@ namespace dispatch
     )
     {
         assert(ToRun.ShouldRunNow());
+        assert(OnNativeThread());
         ToRun();
         if (ToRun.HasReply())
         {
@@ -145,9 +147,13 @@ namespace dispatch
                 //
                 // Push the keep alive task onto the queue
                 //
-                auto job = Job(dispatch::bind(&DispatcherBase::KeepAliveInternal, this), TaskPriority::PRIORITY_NORMAL, this);
-                this->PostTaskInternal(
-                    std::move(job)
+                // auto job = Job(dispatch::bind(&DispatcherBase::KeepAliveInternal, this), TaskPriority::PRIORITY_NORMAL, this);
+                this->PostTask(
+                    dispatch::bind(
+                        &DispatcherBase::KeepAliveInternal,
+                        this
+                    ),
+                    TaskPriority::PRIORITY_NORMAL
                 );
                 m_Keepalives++;
             }
@@ -242,7 +248,7 @@ namespace dispatch
         Job TaskJob
     )
     {
-        if (std::this_thread::get_id() == m_ThreadId)
+        if (OnNativeThread())
         {
             if (TaskJob.IsDelayed())
             {
@@ -299,7 +305,7 @@ namespace dispatch
     {
 #ifdef DEBUG
         static bool warned = false;
-        if(std::this_thread::get_id() != m_ThreadId && !warned)
+        if(OnNativeThread() && !warned)
         {
             std::cerr << "[!] WARNING: PostTaskAndReply called on same thread." << std::endl;
             warned = true;
