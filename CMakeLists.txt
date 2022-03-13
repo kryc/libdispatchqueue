@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 project(libDispatchQueue VERSION 0.1)
 
 # specify clang
-SET(CMAKE_C_COMPILER clang-12)
-SET(CMAKE_CXX_COMPILER clang++-12)
+SET(CMAKE_C_COMPILER clang)
+SET(CMAKE_CXX_COMPILER clang++)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 20)

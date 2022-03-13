@@ -60,8 +60,8 @@ namespace dispatch
         const bool IsDelayed(void) const { return m_Delayed; };
         const timepoint GetDispatchTime(void) const { return m_DispatchTime; };
         const bool ShouldRunNow(void) const { return !m_Delayed || std::chrono::system_clock::now() >= m_DispatchTime; };
-        void operator()() { m_Entrypoint(); };
-        bool operator< (Job& Comparitor) const { return Comparitor.GetPriority() < m_Priority; };
+        void operator()(void) { m_Entrypoint(); };
+        bool operator<(const Job& Rhs) const { return m_Priority < Rhs.GetPriority(); };
         bool HasReply(void) const { return m_Reply != nullptr; };
         std::unique_ptr<Job> GetReply(void) { return std::move(m_Reply); };
     protected:
