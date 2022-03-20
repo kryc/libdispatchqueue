@@ -32,7 +32,7 @@ target_include_directories(dispatchqueue
                         )
 
 # add the test
-add_custom_target(tests)
+add_custom_target(libdispatchqueue_tests)
 file(GLOB TESTS "tests/*.cpp")
 foreach(TEST ${TESTS})
     get_filename_component(TESTNAME ${TEST} NAME_WE)
@@ -41,10 +41,10 @@ foreach(TEST ${TESTS})
                                 PUBLIC
                                     ./include/)
     target_link_libraries(${TESTNAME} dispatchqueue)
-    add_dependencies(tests ${TESTNAME})
+    add_dependencies(libdispatchqueue_tests ${TESTNAME})
 endforeach()
 
-add_custom_target(fuzzers)
+add_custom_target(libdispatchqueue_fuzzers)
 set(FUZZER_SOURCES ${SOURCES})
 file(GLOB FUZZERS "fuzzers/*.cpp")
 foreach(FUZZER ${FUZZERS})
@@ -57,7 +57,7 @@ foreach(FUZZER ${FUZZERS})
                                     ./include/
                             )
     target_link_libraries(${FUZZERNAME} dispatchqueue)
-    add_dependencies(fuzzers ${FUZZERNAME})
+    add_dependencies(libdispatchqueue_fuzzers ${FUZZERNAME})
 endforeach()
 
 configure_file(Config.h.in Config.h)
