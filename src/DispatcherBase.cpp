@@ -195,7 +195,7 @@ namespace dispatch
         //
         Wait();
 
-#ifdef DEBUG
+#ifdef DEBUGINFO
         std::cerr << "Dispatcher \"" << GetName() << "\" terminating (compeleted " << m_TasksCompleted - m_Keepalives << " tasks)" << std::endl;
 #endif
     }

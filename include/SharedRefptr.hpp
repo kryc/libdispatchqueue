@@ -206,6 +206,8 @@ namespace dispatch
         return BoundRefPtr<T>(allocation);
     }
 
+#define STDPTR
+
 #ifdef STDPTR
 #define MakeShared std::make_shared
 #define SharedPtr std::shared_ptr

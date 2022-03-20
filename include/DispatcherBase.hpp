@@ -35,6 +35,7 @@ namespace dispatch{
         bool Stopped(void) { return m_Completed; };
         bool Completed(void) { return m_Completed; };
         std::string GetName(void) { return m_Name; };
+        size_t Size(void) { return m_Queue.size() + m_DelayedQueue.size(); };
         void SetDestructionHandler(DestructionHandler Handler) { m_DestructionHandler = Handler; };
         void SetCompletionHandler(CompletionHandler Handler) { m_CompletionHandler = Handler; };
         void SetThreadDispatcher(DispatcherBase* Dispatcher);

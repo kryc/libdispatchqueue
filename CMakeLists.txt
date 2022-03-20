@@ -44,4 +44,20 @@ foreach(TEST ${TESTS})
     add_dependencies(tests ${TESTNAME})
 endforeach()
 
+add_custom_target(fuzzers)
+set(FUZZER_SOURCES ${SOURCES})
+file(GLOB FUZZERS "fuzzers/*.cpp")
+foreach(FUZZER ${FUZZERS})
+    get_filename_component(FUZZERNAME ${FUZZER} NAME_WE)
+    add_executable(${FUZZERNAME} ${FUZZER} ${FUZZER_SOURCES})
+    target_compile_options(${FUZZERNAME} PUBLIC -fsanitize=fuzzer,address)
+    target_link_options(${FUZZERNAME} PUBLIC -fsanitize=fuzzer,address)
+    target_include_directories(${FUZZERNAME}
+                                PUBLIC
+                                    ./include/
+                            )
+    target_link_libraries(${FUZZERNAME} dispatchqueue)
+    add_dependencies(fuzzers ${FUZZERNAME})
+endforeach()
+
 configure_file(Config.h.in Config.h)
