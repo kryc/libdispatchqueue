@@ -208,7 +208,7 @@ namespace dispatch
 
     void
     PostDelayedTaskToDispatcher(
-        DispatcherBase* Dispatcher,
+        DispatcherBasePtr Dispatcher,
         const Callable& Job,
         const std::chrono::microseconds Delay
     )
