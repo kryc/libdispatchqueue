@@ -26,8 +26,10 @@ namespace dispatch
     DispatcherPoolPtr CreateDispatchPool(const std::string& Name, const size_t Size = 0);
     DispatcherBasePtr GetDispatcher(std::string Name);
     void RemoveDispatcher(DispatcherBase* Dispatcher);
+    void PostTaskToDispatcher(DispatcherBase* Dispatcher, const Callable& Job);
     void PostTaskToDispatcher(DispatcherBasePtr Dispatcher, const Callable& Job);
     void PostTaskToDispatcher(const std::string& Name, const Callable& Job);
+    void PostDelayedTaskToDispatcher(DispatcherBase* Dispatcher, const Callable& Job, const std::chrono::microseconds Delay);
     void PostDelayedTaskToDispatcher(DispatcherBasePtr Dispatcher, const Callable& Job, const std::chrono::microseconds Delay);
     void PostDelayedTaskToDispatcher(const std::string& Name, const Callable& Job, const std::chrono::microseconds Delay);
     void PostTaskAndReply(DispatcherBasePtr Dispatcher, const Callable& Job, const Callable& Reply);
