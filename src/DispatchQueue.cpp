@@ -217,6 +217,24 @@ namespace dispatch
     }
 
     void
+    PostDelayedTaskToDispatcher(
+        const std::string& Name,
+        const Callable& Job,
+        const std::chrono::microseconds Delay
+    )
+    {
+        auto dispatcher = GetDispatcher(Name);
+        if (dispatcher)
+        {
+            PostDelayedTaskToDispatcher(dispatcher, std::move(Job), Delay);
+        }
+        else
+        {
+            std::cerr << "Dispatcher " << Name << " not found" << std::endl;
+        }
+    }
+
+    void
     PostTaskAndReply(
         DispatcherBasePtr Dispatcher,
         const Callable& Job,
@@ -238,22 +256,23 @@ namespace dispatch
     }
 
     void
-    PostTask(
-        DispatcherBase* Dispatcher,
-        const Callable& Job
-    )
-    {
-        PostTaskToDispatcher(Dispatcher, Job);
-    }
-
-    void
     PostDelayedTask(
-        DispatcherBase* Dispatcher,
         const Callable& Job,
         const std::chrono::microseconds Delay
     )
     {
-        PostDelayedTaskToDispatcher(Dispatcher, Job, Delay);
+        auto dispatcher = CurrentDispatcher();
+        PostDelayedTaskToDispatcher(dispatcher, Job, Delay);
+    }
+
+    void
+    PostDelayedTaskStrict(
+        const Callable& Job,
+        const std::chrono::microseconds Delay
+    )
+    {
+        auto dispatcher = CurrentQueue();
+        PostDelayedTaskToDispatcher(dispatcher, Job, Delay);
     }
 
     void
@@ -265,7 +284,7 @@ namespace dispatch
       --*/
     {
         auto dispatcher = CurrentDispatcher();
-        PostTask(dispatcher, Job);
+        PostTaskToDispatcher(dispatcher, Job);
     }
 
     void
@@ -279,7 +298,7 @@ namespace dispatch
     --*/
     {
         auto dispatcher = CurrentQueue();
-        PostTask(dispatcher, Job);
+        PostTaskToDispatcher(dispatcher, Job);
     }
 
     void
@@ -292,16 +311,6 @@ namespace dispatch
     --*/
     {
         PostTaskStrict(Job);
-    }
-
-    void
-    PostDelayedTask(
-        const Callable& Job,
-        const std::chrono::microseconds Delay
-    )
-    {
-        auto dispatcher = CurrentDispatcher();
-        PostDelayedTask(dispatcher, Job, Delay);
     }
 
     bool

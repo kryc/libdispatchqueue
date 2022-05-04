@@ -63,10 +63,20 @@ namespace dispatch
         const TaskPriority Priority
     )
     /*++
-      Post a task to the next dispatcher
+      Post a task to the next dispatcher.
+      If the current queue is empty then always post the
+      task here as it is significantly faster
     --*/
     {
-        Next()->PostTask(Task, Priority);
+        auto currentDispatcher = CurrentQueue();
+        if (currentDispatcher->Empty())
+        {
+            currentDispatcher->PostTask(Task, Priority);
+        }
+        else
+        {
+            Next()->PostTask(Task, Priority);
+        }
     }
 
     void
