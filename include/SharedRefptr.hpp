@@ -64,18 +64,29 @@ namespace dispatch
         SharedRefPtr(
             const SharedRefPtr& Rhs
         )
+        /*++
+          Copy constructor
+        --*/
         {
-            m_Manager = Rhs.m_Manager;
-            m_Manager->ref();
+            //
+            // Forward to copy assignment
+            //
+            *this = Rhs;
         }
 
-        // SharedRefPtr(
-        //     SharedRefPtr&& Rhs
-        // )
-        // {
-        //     m_Manager = Rhs.m_Manager;
-        //     Rhs.m_Manager = nullptr;
-        // }
+
+        SharedRefPtr(
+            SharedRefPtr&& Rhs
+        ) noexcept: m_Manager(nullptr)
+        /*++
+          Move constructor
+        --*/
+        {
+            //
+            // Forward to move assignment
+            //
+            *this = std::move(Rhs);
+        }
 
         SharedRefPtr&
         operator=(
@@ -85,8 +96,15 @@ namespace dispatch
           Move assignment
         --*/
         {
-            m_Manager = Other.m_Manager;
-            Other.m_Manager = nullptr;
+            if (this != &Other)
+            {
+                if (m_Manager != nullptr)
+                {
+                    delete m_Manager;
+                }
+                m_Manager = Other.m_Manager;
+                Other.m_Manager = nullptr;
+            }
             return *this;
         }
 
@@ -98,6 +116,11 @@ namespace dispatch
           Copy assignment
         --*/
         {
+            if (m_Manager != nullptr &&
+                m_Manager->deref() == 0)
+            {
+                delete m_Manager;
+            }
             m_Manager = Other.m_Manager;
             m_Manager->ref();
             return *this;
@@ -205,8 +228,6 @@ namespace dispatch
         T* allocation = new T(std::forward<Args>(x)...);
         return BoundRefPtr<T>(allocation);
     }
-
-#define STDPTR
 
 #ifdef STDPTR
 #define MakeShared std::make_shared
