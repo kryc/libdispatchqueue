@@ -68,15 +68,16 @@ namespace dispatch
       task here as it is significantly faster
     --*/
     {
-        auto currentDispatcher = CurrentQueue();
-        if (currentDispatcher->Empty())
-        {
-            currentDispatcher->PostTask(Task, Priority);
-        }
-        else
-        {
-            Next()->PostTask(Task, Priority);
-        }
+        // auto currentDispatcher = CurrentQueue();
+        // if (currentDispatcher->Empty())
+        // {
+        //     currentDispatcher->PostTask(Task, Priority);
+        // }
+        // else
+        // {
+        //     Next()->PostTask(Task, Priority);
+        // }
+        Next()->PostTask(Task, Priority);
     }
 
     void

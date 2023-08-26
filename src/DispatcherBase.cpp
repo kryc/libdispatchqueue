@@ -124,13 +124,24 @@ namespace dispatch
                 m_Queue.push_front(std::move(job));
             }
 
+            //
+            // Check stop flag
+            //
+            if (m_Stop == true)
+            {
+                // Empty the queue
+                m_Queue.clear();
+                // Notify observers
+                NotifyCompletion();
+                break;
+            }
+
             if (m_Queue.size() == 0)
             {
                 //
                 // Check if we kill this dispatcher
                 //
-                if (m_Stop == true ||
-                    (m_KeepAlive == false && m_ReceivedTask == true))
+                if (m_KeepAlive == false && m_ReceivedTask == true)
                 {
                     break;
                 }
