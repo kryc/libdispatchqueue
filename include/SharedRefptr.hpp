@@ -54,11 +54,18 @@ namespace dispatch
         }
 
         SharedRefPtr(
+            std::nullptr_t
+        )
+        {
+            m_Manager = nullptr;
+        }
+
+        SharedRefPtr(
             T* const Allocation
         )
         {
-            m_Manager = new _ObjectManager<T,Bound>(std::move(Allocation));
-            m_Manager->ref();
+            m_Manager = nullptr;
+            *this = Allocation;
         }
 
         SharedRefPtr(
@@ -77,7 +84,7 @@ namespace dispatch
 
         SharedRefPtr(
             SharedRefPtr&& Rhs
-        ) noexcept: m_Manager(nullptr)
+        ) noexcept
         /*++
           Move constructor
         --*/
@@ -85,23 +92,50 @@ namespace dispatch
             //
             // Forward to move assignment
             //
+            m_Manager = nullptr;
             *this = std::move(Rhs);
         }
 
         SharedRefPtr&
         operator=(
-            SharedRefPtr&& Other
+            std::nullptr_t
         )
+        /*++
+          Null assignment
+        --*/
+        {
+            reset();
+            m_Manager = nullptr;
+            return *this;
+        }
+
+        SharedRefPtr&
+        operator=(
+            T* const Allocation
+        )
+        /*++
+          Pointer assignment.
+          You should never do this and prefer MakeSharedPtr.
+          But it is here. Because.
+        --*/
+        {
+            reset();
+            m_Manager = new _ObjectManager<T,Bound>(std::move(Allocation));
+            m_Manager->ref();
+            return *this;
+        }
+
+        SharedRefPtr&
+        operator=(
+            SharedRefPtr&& Other
+        ) noexcept
         /*++
           Move assignment
         --*/
         {
             if (this != &Other)
             {
-                if (m_Manager != nullptr)
-                {
-                    delete m_Manager;
-                }
+                reset();
                 m_Manager = Other.m_Manager;
                 Other.m_Manager = nullptr;
             }
@@ -116,11 +150,7 @@ namespace dispatch
           Copy assignment
         --*/
         {
-            if (m_Manager != nullptr &&
-                m_Manager->deref() == 0)
-            {
-                delete m_Manager;
-            }
+            reset();
             m_Manager = Other.m_Manager;
             m_Manager->ref();
             return *this;
@@ -131,7 +161,8 @@ namespace dispatch
             const SharedRefPtr& Other
         ) const
         {
-            return (m_Manager == nullptr && Other.m_Manager == nullptr) || (m_Manager->m_Allocation == Other.m_Manager->m_Allocation);
+            return (m_Manager == nullptr && Other == nullptr) ||
+                (Other == m_Manager->m_Allocation);
         }
 
         bool
@@ -139,7 +170,7 @@ namespace dispatch
             const void* Ptr
         ) const
         {
-            return (m_Manager == nullptr) || (m_Manager->m_Allocation == Ptr);
+            return (m_Manager == nullptr && Ptr == nullptr) || (m_Manager != nullptr && m_Manager->m_Allocation == Ptr);
         }
 
         bool
@@ -166,7 +197,34 @@ namespace dispatch
             return m_Manager == nullptr || m_Manager->m_Allocation == nullptr;
         }
 
+        explicit operator
+        bool(
+            void
+        ) const
+        {
+            return m_Manager != nullptr;
+        }
+
         ~SharedRefPtr(
+            void
+        )
+        {
+            reset();
+        }
+
+        inline T*
+        get(
+            void
+        ) const
+        {
+            if (m_Manager != nullptr){
+                return m_Manager->get();
+            }
+            return nullptr;
+        }
+
+        inline void
+        reset(
             void
         )
         {
@@ -175,20 +233,13 @@ namespace dispatch
             {
                 delete m_Manager;
             }
-        }
-
-        inline T*
-        get(
-            void
-        ) const
-        {
-            return m_Manager->get();
+            m_Manager = nullptr;
         }
 
         inline T*
         operator->(
             void
-        ) const
+        ) const noexcept
         {
             return get();
         }
@@ -196,13 +247,35 @@ namespace dispatch
         inline T&
         operator*(
             void
-        ) const
+        ) const noexcept
         {
             return *m_Manager->get();
         }
 
+        const size_t refs(
+            void
+        )
+        {
+            if (m_Manager != nullptr)
+            {
+                return m_Manager->refs();
+            }
+            return 0;
+        }
+
+#ifdef TEST
+        _ObjectManager<T,Bound>*
+        get_manager(
+            void
+        )
+        {
+            return m_Manager;
+        }
+#endif
+
     protected:
         _ObjectManager<T,Bound>* m_Manager = nullptr;
+
     };
 
 

@@ -37,6 +37,7 @@ file(GLOB TESTS "tests/*.cpp")
 foreach(TEST ${TESTS})
     get_filename_component(TESTNAME ${TEST} NAME_WE)
     add_executable(${TESTNAME} EXCLUDE_FROM_ALL ${TEST} ${SOURCES})
+    target_compile_definitions(${TESTNAME} PUBLIC TEST)
     target_include_directories(${TESTNAME}
                                 PUBLIC
                                     ./include/)
@@ -50,6 +51,7 @@ file(GLOB FUZZERS "fuzzers/*.cpp")
 foreach(FUZZER ${FUZZERS})
     get_filename_component(FUZZERNAME ${FUZZER} NAME_WE)
     add_executable(${FUZZERNAME} ${FUZZER} ${FUZZER_SOURCES})
+    target_compile_definitions(${TESTNAME} PUBLIC FUZZER)
     target_compile_options(${FUZZERNAME} PUBLIC -fsanitize=fuzzer,address)
     target_link_options(${FUZZERNAME} PUBLIC -fsanitize=fuzzer,address)
     target_include_directories(${FUZZERNAME}
