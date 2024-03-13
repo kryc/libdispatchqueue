@@ -20,6 +20,7 @@ namespace dispatch
         ~DispatchPool(void) = default;
         void Run(void) override {return;};
         void Stop(void) override;
+        void Start(void) override;
         bool Wait(void) override;
     protected:
         void OnDispatcherTerminated(DispatcherBase* Dispatacher);

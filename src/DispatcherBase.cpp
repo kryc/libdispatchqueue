@@ -255,6 +255,13 @@ namespace dispatch
     }
 
     void
+    DispatcherBase::Start(void)
+    {
+        m_Stop = false;
+        Run();
+    }
+
+    void
     DispatcherBase::PostTaskInternal(
         Job TaskJob
     )

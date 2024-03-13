@@ -111,6 +111,20 @@ namespace dispatch
         }
     }
 
+    void
+    DispatchPool::Start(
+        void
+    )
+    /*++
+      Request each of the dispatchers to start
+    --*/
+    {
+        for (auto& dispatcher : m_Dispatchers)
+        {
+            dispatcher->Start();
+        }
+    }
+
     bool
     DispatchPool::Wait(
         void
