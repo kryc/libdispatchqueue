@@ -31,7 +31,7 @@ namespace dispatch{
         virtual void PostTaskAndReply(const Callable& Task, const Callable& Reply, const TaskPriority Priority = TaskPriority::PRIORITY_NORMAL) = 0;
         virtual bool Wait(void);
         virtual void Stop(void);
-        virtual void Start(void);
+        virtual void Start(void) { Run(); };
         void KeepAlive(const bool KeepAlive) { m_KeepAlive = KeepAlive; };
         bool Stopped(void) { return m_Completed; };
         bool Completed(void) { return m_Completed; };

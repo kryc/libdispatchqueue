@@ -28,6 +28,9 @@ namespace dispatch
     {
         if (m_Waiting)
         {
+#ifdef DEBUG
+            std::cerr << "Warning, not waiting on a thread that is already waited on." << std::endl;
+#endif
             return false;
         }
 
@@ -35,6 +38,7 @@ namespace dispatch
         if (m_Thread.joinable())
         {
             m_Thread.join();
+            m_Waiting = false;
         }
         return true;
     }
@@ -217,6 +221,8 @@ namespace dispatch
       Start dispatcher on a new thread
     --*/
     {
+        m_Stop = false;
+        m_Completed = false;
         m_Thread = std::thread(
             std::bind(
                 &DispatcherBase::DispatchLoop,
@@ -252,13 +258,6 @@ namespace dispatch
             ),
             TaskPriority::PRIORITY_HIGH
         );
-    }
-
-    void
-    DispatcherBase::Start(void)
-    {
-        m_Stop = false;
-        Run();
     }
 
     void
