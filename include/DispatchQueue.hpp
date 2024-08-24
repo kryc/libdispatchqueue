@@ -43,6 +43,8 @@ namespace dispatch
     bool OnDispatcher(const std::string& Name);
     void KeepAlive(const bool KeepAlive);
 
+    void DoNothing(void);
+
     void End(void);
 
     void GlobalDispatcherWait(void);

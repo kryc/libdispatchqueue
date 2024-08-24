@@ -349,6 +349,17 @@ namespace dispatch
     }
 
     void
+    DoNothing(
+        void
+    )
+    /*++
+      A utility function that does nothing
+    --*/
+    {
+        return;
+    }
+
+    void
     End(
         void
     )
