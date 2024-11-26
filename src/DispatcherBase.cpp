@@ -104,6 +104,8 @@ namespace dispatch
             ThreadDispatcher = m_ThreadDispatcher;
         }
         m_ThreadId = std::this_thread::get_id();
+        // Set the name
+        pthread_setname_np(pthread_self(), m_Name.c_str());
 
         for (;;)
         {
