@@ -105,7 +105,11 @@ namespace dispatch
         }
         m_ThreadId = std::this_thread::get_id();
         // Set the name
+#ifdef __APPLE__
+        pthread_setname_np(m_Name.c_str());
+#else
         pthread_setname_np(pthread_self(), m_Name.c_str());
+#endif
 
         for (;;)
         {
