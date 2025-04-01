@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # set compiler flags
-set(CMAKE_CXX_FLAGS "-Wall -Werror -fno-exceptions")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -fno-exceptions -Wno-deprecated-declarations")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -fno-omit-frame-pointer -fsanitize=address -DDEBUG -DDEBUGINFO")
